@@ -1,34 +1,19 @@
 import { useCallback, useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { supabase, type CollectionRow } from '../lib/supabase';
+import type { CollectionRow } from '../lib/supabase';
 import { CARDS_BY_ID } from '../lib/cards';
-import { useUserId } from './useAuth';
+import { useDataStore } from './useDataStore';
 
-const key = (userId: string | null) => ['collection', userId];
-
-async function fetchCollection(): Promise<CollectionRow[]> {
-  // Page through in case a collection grows past the default 1000-row limit.
-  const rows: CollectionRow[] = [];
-  for (let from = 0; ; from += 1000) {
-    const { data, error } = await supabase
-      .from('collection_items')
-      .select('card_id, quantity')
-      .gt('quantity', 0)
-      .range(from, from + 999);
-    if (error) throw error;
-    rows.push(...data);
-    if (data.length < 1000) return rows;
-  }
-}
+const key = (scope: string) => ['collection', scope];
 
 export function useCollection() {
-  const userId = useUserId();
+  const { store, scope, ready } = useDataStore();
   const qc = useQueryClient();
 
   const query = useQuery({
-    queryKey: key(userId),
-    queryFn: fetchCollection,
-    enabled: !!userId,
+    queryKey: key(scope),
+    queryFn: () => store.listCollection(),
+    enabled: ready,
     staleTime: 60_000,
   });
 
@@ -50,41 +35,26 @@ export function useCollection() {
   const setMutation = useMutation({
     // Run collection writes one at a time so rapid +/- clicks land in order.
     scope: { id: 'collection-write' },
-    mutationFn: async ({ cardId, quantity }: { cardId: string; quantity: number }) => {
-      if (quantity <= 0) {
-        const { error } = await supabase.from('collection_items').delete().eq('card_id', cardId);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from('collection_items')
-          .upsert({ user_id: userId, card_id: cardId, quantity, updated_at: new Date().toISOString() });
-        if (error) throw error;
-      }
-    },
+    mutationFn: ({ cardId, quantity }: { cardId: string; quantity: number }) => store.setQuantity(cardId, quantity),
     // Optimistic update so +/- feels instant.
     onMutate: async ({ cardId, quantity }) => {
-      await qc.cancelQueries({ queryKey: key(userId) });
-      const prev = qc.getQueryData<CollectionRow[]>(key(userId));
+      await qc.cancelQueries({ queryKey: key(scope) });
+      const prev = qc.getQueryData<CollectionRow[]>(key(scope));
       const next = (prev ?? []).filter((r) => r.card_id !== cardId);
       if (quantity > 0) next.push({ card_id: cardId, quantity });
-      qc.setQueryData(key(userId), next);
+      qc.setQueryData(key(scope), next);
       return { prev };
     },
-    onError: (_e, _v, ctx) => ctx?.prev && qc.setQueryData(key(userId), ctx.prev),
+    onError: (_e, _v, ctx) => ctx?.prev && qc.setQueryData(key(scope), ctx.prev),
   });
 
   const importMutation = useMutation({
     mutationFn: async (rows: CollectionRow[]) => {
       const clean = rows.filter((r) => CARDS_BY_ID.has(r.card_id) && r.quantity > 0);
-      for (let i = 0; i < clean.length; i += 500) {
-        const { error } = await supabase
-          .from('collection_items')
-          .upsert(clean.slice(i, i + 500).map((r) => ({ ...r, user_id: userId })));
-        if (error) throw error;
-      }
+      await store.upsertCollection(clean);
       return clean.length;
     },
-    onSettled: () => qc.invalidateQueries({ queryKey: key(userId) }),
+    onSettled: () => qc.invalidateQueries({ queryKey: key(scope) }),
   });
 
   const qty = useCallback((id: string) => byId.get(id) ?? 0, [byId]);

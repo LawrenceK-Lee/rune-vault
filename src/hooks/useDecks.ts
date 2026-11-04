@@ -1,13 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { supabase, type DeckCardRow, type DeckRow } from '../lib/supabase';
+import type { NewDeck } from '../lib/store';
+import type { DeckWithCards } from '../lib/store';
 import { maxQuantity, type DeckEntry, type DeckInput, type Zone } from '../lib/deckRules';
 import { CARDS_BY_ID } from '../lib/cards';
-import { useUserId } from './useAuth';
+import { useDataStore } from './useDataStore';
 
-export interface DeckWithCards extends DeckRow {
-  deck_cards: DeckCardRow[];
-}
+export type { DeckWithCards } from '../lib/store';
 
 export const toDeckInput = (d: Pick<DeckWithCards, 'legend_id' | 'champion_id' | 'deck_cards'>): DeckInput => ({
   legendId: d.legend_id,
@@ -16,53 +15,16 @@ export const toDeckInput = (d: Pick<DeckWithCards, 'legend_id' | 'champion_id' |
 });
 
 export function useDeckList() {
-  const userId = useUserId();
-  return useQuery({
-    queryKey: ['decks', userId],
-    enabled: !!userId,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('decks')
-        .select('*, deck_cards(*)')
-        .order('updated_at', { ascending: false });
-      if (error) throw error;
-      return data as DeckWithCards[];
-    },
-  });
+  const { store, scope, ready } = useDataStore();
+  return useQuery({ queryKey: ['decks', scope], enabled: ready, queryFn: () => store.listDecks() });
 }
 
 export function useDeckMutations() {
-  const userId = useUserId();
+  const { store, scope } = useDataStore();
   const qc = useQueryClient();
-  const invalidate = () => qc.invalidateQueries({ queryKey: ['decks', userId] });
-
-  const create = useMutation({
-    mutationFn: async (input: { name: string; legend_id?: string | null; champion_id?: string | null; entries?: DeckEntry[] }) => {
-      const { data, error } = await supabase
-        .from('decks')
-        .insert({ name: input.name, legend_id: input.legend_id ?? null, champion_id: input.champion_id ?? null })
-        .select()
-        .single();
-      if (error) throw error;
-      if (input.entries?.length) {
-        const { error: e2 } = await supabase
-          .from('deck_cards')
-          .insert(input.entries.map((e) => ({ deck_id: data.id, card_id: e.cardId, zone: e.zone, quantity: e.quantity })));
-        if (e2) throw e2;
-      }
-      return data as DeckRow;
-    },
-    onSuccess: invalidate,
-  });
-
-  const remove = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from('decks').delete().eq('id', id);
-      if (error) throw error;
-    },
-    onSuccess: invalidate,
-  });
-
+  const invalidate = () => qc.invalidateQueries({ queryKey: ['decks', scope] });
+  const create = useMutation({ mutationFn: (input: NewDeck) => store.createDeck(input), onSuccess: invalidate });
+  const remove = useMutation({ mutationFn: (id: string) => store.deleteDeck(id), onSuccess: invalidate });
   return { create, remove };
 }
 
@@ -79,10 +41,10 @@ export interface DeckDraft {
 
 /**
  * Editable deck. Edits apply to local state immediately and are saved to Supabase
- * after a short pause, sending only what changed.
+ * after a short pause (to the account, or this browser for guests), sending only what changed.
  */
 export function useDeckEditor(deckId: string) {
-  const userId = useUserId();
+  const { store, scope, ready } = useDataStore();
   const qc = useQueryClient();
   const [draft, setDraft] = useState<DeckDraft | null>(null);
   const [saveState, setSaveState] = useState<'saved' | 'pending' | 'saving' | 'error'>('saved');
@@ -90,14 +52,10 @@ export function useDeckEditor(deckId: string) {
   const saved = useRef<DeckDraft | null>(null);
 
   const load = useQuery({
-    queryKey: ['deck', deckId],
-    enabled: !!userId,
+    queryKey: ['deck', scope, deckId],
+    enabled: ready,
     refetchOnWindowFocus: false,
-    queryFn: async () => {
-      const { data, error } = await supabase.from('decks').select('*, deck_cards(*)').eq('id', deckId).single();
-      if (error) throw error;
-      return data as DeckWithCards;
-    },
+    queryFn: () => store.getDeck(deckId),
   });
 
   useEffect(() => {
@@ -125,11 +83,7 @@ export function useDeckEditor(deckId: string) {
         prev.legendId !== next.legendId ||
         prev.championId !== next.championId
       ) {
-        const { error } = await supabase
-          .from('decks')
-          .update({ name: next.name, notes: next.notes || null, legend_id: next.legendId, champion_id: next.championId })
-          .eq('id', deckId);
-        if (error) throw error;
+        await store.updateDeck(deckId, { name: next.name, notes: next.notes || null, legend_id: next.legendId, champion_id: next.championId });
       }
       const before = new Map(prev.entries.map((e) => [ek(e.cardId, e.zone), e.quantity]));
       const after = new Map(next.entries.map((e) => [ek(e.cardId, e.zone), e.quantity]));
@@ -137,26 +91,17 @@ export function useDeckEditor(deckId: string) {
         .filter((e) => before.get(ek(e.cardId, e.zone)) !== e.quantity)
         .map((e) => ({ deck_id: deckId, card_id: e.cardId, zone: e.zone, quantity: e.quantity }));
       const deletes = prev.entries.filter((e) => !after.has(ek(e.cardId, e.zone)));
-      if (upserts.length) {
-        const { error } = await supabase.from('deck_cards').upsert(upserts);
-        if (error) throw error;
-      }
-      for (const e of deletes) {
-        const { error } = await supabase
-          .from('deck_cards')
-          .delete()
-          .match({ deck_id: deckId, card_id: e.cardId, zone: e.zone });
-        if (error) throw error;
-      }
+      await store.upsertDeckCards(upserts);
+      await store.deleteDeckCards(deckId, deletes.map((e) => ({ card_id: e.cardId, zone: e.zone })));
       saved.current = next;
       setSaveState('saved');
       setSaveError(null);
-      qc.invalidateQueries({ queryKey: ['decks', userId] });
+      qc.invalidateQueries({ queryKey: ['decks', scope] });
     } catch (err) {
       setSaveState('error');
       setSaveError(err instanceof Error ? err.message : String(err));
     }
-  }, [deckId, qc, userId]);
+  }, [deckId, qc, scope, store]);
 
   // Saves are queued so they never overlap; each diffs against the last successful save.
   const chain = useRef<Promise<void>>(Promise.resolve());

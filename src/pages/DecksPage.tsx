@@ -7,6 +7,7 @@ import { toDeckInput, useDeckList, useDeckMutations, type DeckWithCards } from '
 import { useCollection } from '../hooks/useCollection';
 import { DomainDots, ErrorNote, Spinner } from '../components/bits';
 import { ImportDeckModal } from '../components/ImportDeckModal';
+import { GuestNotice } from '../components/GuestData';
 
 function DeckCard({ deck, qtyBase, onDelete }: { deck: DeckWithCards; qtyBase: (k: string) => number; onDelete: () => void }) {
   const [confirming, setConfirming] = useState(false);
@@ -85,6 +86,7 @@ export function DecksPage() {
         <h1 className="heading text-2xl">My Decks</h1>
         {buttons}
       </div>
+      <GuestNotice />
       <ErrorNote error={decks.error ?? (importing ? null : create.error) ?? remove.error} />
       {decks.isLoading ? (
         <Spinner />

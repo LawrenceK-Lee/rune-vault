@@ -13,6 +13,8 @@ import { SetupPage } from './pages/SetupPage';
 import { AccountPage } from './pages/AccountPage';
 import { useProfile } from './hooks/useAccount';
 import { isPlaceholderEmail } from './lib/auth';
+import { useGuestStorageSync } from './hooks/useDataStore';
+import { GuestDataPrompt } from './components/GuestData';
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { session, loading } = useAuth();
@@ -23,11 +25,18 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+/** Wait until we know whether someone is signed in, so a page doesn't flash the guest copy first. */
+function WaitForAuth({ children }: { children: React.ReactNode }) {
+  const { loading } = useAuth();
+  return loading ? <Spinner /> : <>{children}</>;
+}
+
 const navLink = ({ isActive }: { isActive: boolean }) =>
   `rounded-lg px-3 py-2 text-sm font-medium transition-colors ${isActive ? 'bg-ink-700 text-gold-300' : 'text-slate-300 hover:text-white'}`;
 
 export function App() {
   const { session } = useAuth();
+  useGuestStorageSync();
   const { profile } = useProfile();
   const qc = useQueryClient();
   const accountName = profile?.username ?? (isPlaceholderEmail(session?.user.email) ? 'Account' : session?.user.email);
@@ -78,13 +87,16 @@ export function App() {
         <Routes>
           <Route path="/" element={<CardsPage />} />
           <Route path="/login" element={supabaseConfigured ? <LoginPage /> : <SetupPage />} />
-          <Route path="/collection" element={<RequireAuth><CollectionPage /></RequireAuth>} />
-          <Route path="/decks" element={<RequireAuth><DecksPage /></RequireAuth>} />
-          <Route path="/decks/:deckId" element={<RequireAuth><DeckEditorPage /></RequireAuth>} />
+          {/* Collection and decks work signed out too: guests' data is kept in this browser. */}
+          <Route path="/collection" element={<WaitForAuth><CollectionPage /></WaitForAuth>} />
+          <Route path="/decks" element={<WaitForAuth><DecksPage /></WaitForAuth>} />
+          <Route path="/decks/:deckId" element={<WaitForAuth><DeckEditorPage /></WaitForAuth>} />
           <Route path="/account" element={<RequireAuth><AccountPage /></RequireAuth>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
+
+      <GuestDataPrompt />
 
       <footer className="shrink-0 truncate border-t border-ink-800 px-4 py-1.5 text-center text-[11px] text-slate-500" title={`Card data synced ${new Date(SYNCED_AT).toLocaleDateString()}`}>
         Unofficial fan-made tool, not endorsed by Riot Games. Riftbound card names, text and art © Riot Games.

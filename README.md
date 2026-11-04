@@ -6,7 +6,7 @@ A web app (installable as a PWA) for the Riftbound TCG:
 - **Collection**: track how many copies of each printing you own. Includes set-completion progress, a quick-add mode for logging packs, and an Import / Export menu: import from Excel (.xlsx), CSV or JSON (TCGplayer-style Set + Card Number columns, codes like OGN-066, or card names, with a preview and a choice to add to or replace your counts), and export to CSV or JSON.
 - **Decks**: build decks that are checked live against the Constructed rules, or import one by pasting a decklist, and see which cards you still need to get.
 
-Browsing cards works with no setup. The collection and decks need a free Supabase project.
+Everything works without an account: signed-out visitors' collection and decks are saved in their browser. Signing in (with a free Supabase project behind it) saves them to an account instead, so they sync across devices.
 
 ## Run it on your own computer
 
@@ -17,18 +17,23 @@ npm install
 npm run dev          # then open http://localhost:5173
 ```
 
-What works depends on how much you set up:
+That's all you need: the whole app works with **no login and no other setup**. Cards, collection tracking, imports and exports, and deck building all run in your browser.
 
-| Setup | What you get | Sign-in |
+### Where your data is saved without an account
+
+| | Without signing in | Signed in |
 |---|---|---|
-| **Nothing**: just the two commands above | The full card browser: search, filters, card details, and prices with currency conversion. | None. There's no sign-in button. |
-| **Your own Supabase project** (free, about 10 minutes) | Everything: collection tracking, imports and exports, and deck building. | Yes, but it's your own private project, so only you have accounts on it. |
+| **Saved in** | This browser's local storage, on this computer | Your account, in Supabase |
+| **Other devices or browsers** | Not shared: each browser has its own copy | Synced everywhere you sign in |
+| **Lost if** | You clear this site's data, or use a private window (cleared when it closes) | You delete your account |
 
-Without Supabase, the **Collection** and **Decks** pages show setup instructions instead, because your collection and decks are saved in a Supabase database. There's no offline or guest mode yet.
+Back up a browser-only collection with **Collection → Import / Export → Export as JSON**. Decks can be saved as text with **Copy decklist** in the deck editor.
 
-### Quickest way to the full app locally
+If you sign in later, Rune Vault offers to move what's saved in the browser into your account. Card counts are added to the account's collection, and the decks are copied over.
 
-You only need the parts of [Setup](#setup) below that create the database. Google, Discord and the username sign-up function are all optional:
+### Adding accounts (optional)
+
+Accounts need your own free Supabase project. Without one, the app hides the **Sign in** button and everything stays in the browser. To set one up you only need the parts of [Setup](#setup) below that create the database. Google, Discord and the username sign-up function are all optional:
 
 1. Create a free project at [supabase.com](https://supabase.com).
 2. In **SQL Editor**, run [0001_init.sql](supabase/migrations/0001_init.sql), then [0002_accounts.sql](supabase/migrations/0002_accounts.sql).
@@ -162,7 +167,8 @@ supabase/migrations/       database schema + RLS policies
 src/data/                  generated card + set JSON
 src/lib/cards.ts           card catalog, indexes, search/filter
 src/lib/deckRules.ts       deck validation + missing-card calculation (pure, tested)
-src/hooks/                 auth, collection, decks (Supabase + react-query)
+src/lib/store.ts           where data is saved: Supabase when signed in, localStorage for guests
+src/hooks/                 auth, collection, decks (react-query over the store above)
 src/pages/                 Cards, Collection, Decks, DeckEditor, Login
 src/components/            card grid/tile/detail modal, filters, small UI bits
 ```

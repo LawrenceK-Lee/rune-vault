@@ -14,6 +14,7 @@ import { CardTile } from '../components/CardTile';
 import { CardDetailModal } from '../components/CardDetailModal';
 import { ErrorNote, Spinner } from '../components/bits';
 import { Menu } from '../components/Menu';
+import { GuestNotice } from '../components/GuestData';
 import { ImportCollectionModal, type ImportMode } from '../components/ImportCollectionModal';
 import type { ParsedCollection } from '../lib/collectionImport';
 
@@ -139,6 +140,7 @@ export function CollectionPage() {
         </div>
       </div>
 
+      <GuestNotice />
       <ErrorNote error={col.error} />
       {message && <div className="shrink-0 rounded-lg border border-ink-600 bg-ink-800 px-3 py-2 text-sm text-slate-200">{message}</div>}
       {quickAdd && (
