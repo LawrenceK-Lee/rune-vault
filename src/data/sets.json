@@ -1,0 +1,41 @@
+{
+  "syncedAt": "2026-11-04T10:19:28.010Z",
+  "sets": [
+    {
+      "id": "OGN",
+      "name": "Origins",
+      "cardCount": 352,
+      "baseCount": 298
+    },
+    {
+      "id": "OGS",
+      "name": "Proving Grounds",
+      "cardCount": 24,
+      "baseCount": 24
+    },
+    {
+      "id": "SFD",
+      "name": "Spiritforged",
+      "cardCount": 288,
+      "baseCount": 221
+    },
+    {
+      "id": "UNL",
+      "name": "Unleashed",
+      "cardCount": 288,
+      "baseCount": 219
+    },
+    {
+      "id": "VEN",
+      "name": "Vendetta",
+      "cardCount": 237,
+      "baseCount": 166
+    },
+    {
+      "id": "RAD",
+      "name": "Radiance",
+      "cardCount": 219,
+      "baseCount": 167
+    }
+  ]
+}
