@@ -41,7 +41,7 @@ export function FilterBar({
     (filters.energyMin != null ? 1 : 0) + (filters.energyMax != null ? 1 : 0) + (filters.owned !== 'all' ? 1 : 0);
 
   return (
-    <div className="space-y-3">
+    <div className="shrink-0 space-y-2 sm:space-y-3">
       <div className="flex flex-wrap items-center gap-2">
         <input
           ref={searchRef}
@@ -55,9 +55,11 @@ export function FilterBar({
               onSearchEnter();
             }
           }}
-          className="min-w-0 flex-1 basis-60"
+          className="min-w-0 flex-1 basis-full sm:basis-60"
         />
-        <select value={sort} onChange={(e) => onSort(e.target.value as SortKey)} aria-label="Sort by">
+        {/* On phones these sit together on one line under the search box. */}
+        <div className="flex min-w-0 flex-1 items-center gap-2 sm:flex-none">
+        <select value={sort} onChange={(e) => onSort(e.target.value as SortKey)} aria-label="Sort by" className="min-w-0 max-w-[11rem] sm:max-w-none">
           <option value="set">Sort: Set #</option>
           <option value="name">Sort: Name</option>
           <option value="energy">Sort: Energy</option>
@@ -72,13 +74,14 @@ export function FilterBar({
             Clear
           </button>
         )}
-        <span className="ml-auto text-sm text-slate-400 tabular-nums">{resultCount.toLocaleString()} cards</span>
+        <span className="ml-auto whitespace-nowrap text-sm text-slate-400 tabular-nums">{resultCount.toLocaleString()} cards</span>
+        </div>
       </div>
 
       {!hide.includes('domains') && (
-        <div className="flex flex-wrap gap-1.5">
+        <div className="-mx-4 flex gap-1.5 overflow-x-auto px-4 pb-0.5 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
           {domainOptions.map((d: Domain) => (
-            <button key={d} type="button" className={activeDomains.includes(d) ? 'chip-on' : 'chip-off'} onClick={() => set({ domains: toggle(activeDomains, d) })}>
+            <button key={d} type="button" className={`shrink-0 ${activeDomains.includes(d) ? 'chip-on' : 'chip-off'}`} onClick={() => set({ domains: toggle(activeDomains, d) })}>
               <DomainDot domain={d} /> {d}
             </button>
           ))}
@@ -86,7 +89,7 @@ export function FilterBar({
       )}
 
       {open && (
-        <div className="panel grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="panel grid max-h-[45vh] gap-4 overflow-y-auto p-4 sm:max-h-none sm:grid-cols-2 lg:grid-cols-4">
           {!hide.includes('types') && (
             <fieldset>
               <legend className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">Type</legend>

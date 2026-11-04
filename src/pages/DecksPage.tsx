@@ -67,7 +67,7 @@ export function DecksPage() {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 pb-6">
       <div className="flex items-center justify-between gap-3">
         <h1 className="heading text-2xl">My Decks</h1>
         <button type="button" className="btn-primary" onClick={newDeck} disabled={create.isPending}>

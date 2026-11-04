@@ -66,18 +66,20 @@ function RateInput() {
   );
 }
 
-/** Show-prices switch, currency picker and the price disclaimer, shown above card grids. */
+/** Show-prices switch, currency picker and a collapsible price notice, shown above card grids. */
 export function PriceBar({ show, onChange }: { show: boolean; onChange: (v: boolean) => void }) {
-  const { available } = usePrices();
+  const { available, updatedAt } = usePrices();
   const money = useMoney();
+  const [about, setAbout] = useState(false);
   if (!available) return null;
 
   return (
-    <div className="panel space-y-2 px-4 py-3">
-      <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-slate-300">
+    <div className="panel shrink-0 px-3 py-2">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-slate-300 sm:gap-x-5">
         <label className="flex cursor-pointer items-center gap-2">
           <input type="checkbox" className="h-4 w-4 accent-gold-400" checked={show} onChange={(e) => onChange(e.target.checked)} />
-          Show prices
+          <span className="sm:hidden">Prices</span>
+          <span className="hidden sm:inline">Show prices</span>
         </label>
         {show && (
           <>
@@ -95,11 +97,25 @@ export function PriceBar({ show, onChange }: { show: boolean; onChange: (v: bool
                 ))}
               </select>
             </label>
-            {money.settings.code !== 'USD' && <RateInput />}
+            {/* Rate + update summary: always shown on larger screens, behind "Details" on phones. */}
+            {money.settings.code !== 'USD' && (
+              <span className={`${about ? 'flex' : 'hidden'} sm:flex`}>
+                <RateInput />
+              </span>
+            )}
+            <span className="ml-auto flex items-center gap-2 text-xs text-slate-400">
+              <span className={`${about ? 'inline' : 'hidden'} sm:inline`}>
+                TCGplayer prices, updated daily ~{localTimeOfUtc(PRICE_SYNC_UTC)}
+                {updatedAt && <> · last {new Date(updatedAt).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}</>}
+              </span>
+              <button type="button" className="text-gold-300 underline" onClick={() => setAbout((a) => !a)} aria-expanded={about}>
+                {about ? 'Hide' : <><span className="sm:hidden">Details</span><span className="hidden sm:inline">About prices</span></>}
+              </button>
+            </span>
           </>
         )}
       </div>
-      {show && <PriceDisclaimer />}
+      {show && about && <PriceDisclaimer className="mt-2 border-t border-ink-700 pt-2" />}
     </div>
   );
 }

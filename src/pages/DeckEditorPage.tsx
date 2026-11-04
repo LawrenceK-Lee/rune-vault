@@ -27,6 +27,7 @@ import { CardTile } from '../components/CardTile';
 import { CardDetailModal } from '../components/CardDetailModal';
 import { DomainDots, ErrorNote, QuantityStepper, Spinner } from '../components/bits';
 import { PriceBar } from '../components/PriceBar';
+import { ScrollPage } from '../components/ScrollPage';
 
 const ZONE_LABEL: Record<Zone, string> = { main: 'Main deck', rune: 'Runes', battlefield: 'Battlefields', sideboard: 'Sideboard' };
 const TYPE_ORDER = ['unit', 'spell', 'gear'];
@@ -53,9 +54,9 @@ function LegendPicker({ onPick, current }: { onPick: (c: Card) => void; current:
     ).sort((a, b) => (legendChampion(a) ?? '').localeCompare(legendChampion(b) ?? ''));
   }, [q]);
   return (
-    <div className="space-y-3">
-      <input type="search" placeholder="Search legends by champion, name or domain…" value={q} onChange={(e) => setQ(e.target.value)} className="w-full" autoFocus />
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(130px,1fr))] gap-3">
+    <div className="flex min-h-0 flex-1 flex-col gap-3">
+      <input type="search" placeholder="Search legends by champion, name or domain…" value={q} onChange={(e) => setQ(e.target.value)} className="w-full shrink-0" autoFocus />
+      <div className="grid min-h-0 flex-1 grid-cols-[repeat(auto-fill,minmax(150px,1fr))] content-start gap-4 overflow-y-auto overscroll-contain pb-6 pt-1">
         {legends.map((l) => (
           <button key={l.id} type="button" onClick={() => onPick(l)} className={`text-left ${current === l.id ? 'ring-2 ring-gold-400 rounded-lg' : ''}`}>
             <img src={cardImage(l)} alt={displayName(l)} loading="lazy" className="w-full rounded-[4.5%/3.3%] ring-1 ring-ink-700 hover:ring-gold-400/60" style={{ aspectRatio: '744 / 1039' }} />
@@ -223,15 +224,17 @@ export function DeckEditorPage() {
 
   // ---------------- add-cards panel
   const addPanel = pickingLegend || !legend ? (
-    <div className="space-y-3">
-      <h2 className="heading text-lg">{legend ? 'Change Legend' : 'Step 1 · Choose your Legend'}</h2>
-      {legend && <button type="button" className="btn-ghost" onClick={() => setPickingLegend(false)}>Cancel</button>}
+    <div className="flex min-h-0 flex-1 flex-col gap-3">
+      <div className="flex shrink-0 items-center justify-between gap-2">
+        <h2 className="heading text-lg">{legend ? 'Change Legend' : 'Step 1 · Choose your Legend'}</h2>
+        {legend && <button type="button" className="btn-ghost" onClick={() => setPickingLegend(false)}>Cancel</button>}
+      </div>
       <LegendPicker onPick={setLegend} current={draft.legendId} />
     </div>
   ) : (
-    <div className="space-y-3">
+    <div className="flex min-h-0 flex-1 flex-col gap-3">
       {!champion && (
-        <div className="rounded-lg border border-gold-400/40 bg-gold-400/10 px-3 py-2 text-sm text-gold-300">
+        <div className="shrink-0 rounded-lg border border-gold-400/40 bg-gold-400/10 px-3 py-2 text-sm text-gold-300">
           Step 2 · Choose your Chosen Champion: a {tag} champion unit. Use <b>★ Champion</b> on a card below.
           <button type="button" className="ml-2 underline" onClick={() => setFilters({ ...EMPTY_FILTERS, query: tag ?? '', types: ['unit'] })}>
             Show {tag} units
@@ -239,7 +242,7 @@ export function DeckEditorPage() {
         </div>
       )}
       <FilterBar filters={filters} onChange={setFilters} sort={sort} onSort={setSort} showOwned resultCount={pool.length} pricesAvailable={prices.available} domainOptions={domainOptions} />
-      <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-300">
+      <label className="flex shrink-0 cursor-pointer items-center gap-2 text-sm text-slate-300">
         <input type="checkbox" className="h-4 w-4 accent-gold-400" checked={legalOnly} onChange={(e) => setLegalOnly(e.target.checked)} />
         Only show cards legal for {legendChampion(legend)} ({legend.domains.map(cap).join(' / ')})
       </label>
@@ -290,7 +293,7 @@ export function DeckEditorPage() {
 
   // ---------------- deck panel
   const deckPanel = (
-    <div className="space-y-4">
+    <div className="space-y-4 pb-6">
       <div className="grid grid-cols-2 gap-2">
         {([['Legend', legend, () => setPickingLegend(true)], ['Chosen Champion', champion, () => champion && setOpen(champion)]] as const).map(
           ([label, c, onClick]) => (
@@ -450,8 +453,8 @@ export function DeckEditorPage() {
   );
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2">
+    <ScrollPage>
+      <div className="flex shrink-0 flex-wrap items-center gap-2">
         <Link to="/decks" className="btn-ghost px-2" aria-label="Back to decks">←</Link>
         <input
           value={draft.name}
@@ -465,25 +468,26 @@ export function DeckEditorPage() {
         {ed.saveState === 'error' && <button type="button" className="btn-ghost text-xs" onClick={ed.retrySave}>Retry</button>}
         <button type="button" className="btn-ghost" onClick={() => copyText(deckText(draft), 'Decklist copied')}>Copy decklist</button>
       </div>
-      {ed.saveError && <ErrorNote error={ed.saveError} />}
-      {copied && <p className="text-sm text-emerald-300">{copied}</p>}
+      {ed.saveError && <div className="shrink-0"><ErrorNote error={ed.saveError} /></div>}
+      {copied && <p className="shrink-0 text-sm text-emerald-300">{copied}</p>}
 
       {/* Mobile tabs */}
-      <div className="grid grid-cols-2 gap-1 rounded-lg bg-ink-800 p-1 text-sm lg:hidden">
+      <div className="grid shrink-0 grid-cols-2 gap-1 rounded-lg bg-ink-800 p-1 text-sm lg:hidden">
         <button type="button" onClick={() => setTab('add')} className={`rounded-md py-1.5 ${tab === 'add' ? 'bg-ink-600 text-white' : 'text-slate-400'}`}>Add cards</button>
         <button type="button" onClick={() => setTab('deck')} className={`rounded-md py-1.5 ${tab === 'deck' ? 'bg-ink-600 text-white' : 'text-slate-400'}`}>
           Deck ({summary.mainCount}) {summary.isLegal ? '✓' : '⚠'}
         </button>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_440px]">
-        <div className={tab === 'add' ? '' : 'hidden lg:block'}>{addPanel}</div>
-        <aside className={`${tab === 'deck' ? '' : 'hidden lg:block'} lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto lg:pr-1`}>{deckPanel}</aside>
+      {/* Card pool and deck list each scroll independently. */}
+      <div className="grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_440px]">
+        <div className={`${tab === 'add' ? 'flex' : 'hidden lg:flex'} min-h-0 flex-col`}>{addPanel}</div>
+        <aside className={`${tab === 'deck' ? 'block' : 'hidden lg:block'} min-h-0 overflow-y-auto overscroll-contain pr-1`}>{deckPanel}</aside>
       </div>
 
       {open && (
         <CardDetailModal card={open} onClose={close} onSelect={setOpen} qty={col.qty} setQty={col.setQty} actions={detailActions} />
       )}
-    </div>
+    </ScrollPage>
   );
 }

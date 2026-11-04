@@ -13,6 +13,7 @@ import { ErrorNote } from '../components/bits';
 import { usePersistentState } from '../hooks/usePersistentState';
 import { usePrices } from '../hooks/usePrices';
 import { PriceBar } from '../components/PriceBar';
+import { ScrollPage } from '../components/ScrollPage';
 
 export function CardsPage() {
   const { session } = useAuth();
@@ -32,9 +33,9 @@ export function CardsPage() {
   const close = useCallback(() => setOpen(null), []);
 
   return (
-    <div className="space-y-4">
+    <ScrollPage>
       {!signedIn && supabaseConfigured && (
-        <div className="panel flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-sm text-slate-300">
+        <div className="panel hidden shrink-0 flex-wrap items-center justify-between gap-2 px-4 py-2 text-sm text-slate-300 sm:flex">
           <span>Sign in to track which cards you own and build decks.</span>
           <Link to="/login" className="btn-primary">Sign in</Link>
         </div>
@@ -63,6 +64,6 @@ export function CardsPage() {
           setQty={signedIn ? collection.setQty : undefined}
         />
       )}
-    </div>
+    </ScrollPage>
   );
 }

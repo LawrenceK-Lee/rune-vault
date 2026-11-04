@@ -28,8 +28,10 @@ export function App() {
   const qc = useQueryClient();
 
   return (
-    <div className="flex min-h-screen flex-col">
-      <header className="sticky top-0 z-40 border-b border-ink-700 bg-ink-900/90 backdrop-blur" style={{ top: 'env(safe-area-inset-top, 0px)' }}>
+    // Fixed-height shell: the header stays put, and each page scrolls inside <main>.
+    // Card-grid pages fill <main> and scroll only their grid (see CardGrid).
+    <div className="flex flex-col" style={{ height: 'calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))' }}>
+      <header className="z-40 shrink-0 border-b border-ink-700 bg-ink-900">
         <div className="mx-auto flex max-w-screen-2xl items-center gap-2 px-4 py-2.5">
           <NavLink to="/" className="mr-2 flex items-center gap-2">
             <img src="/icon.svg" alt="" className="h-7 w-7" />
@@ -56,13 +58,13 @@ export function App() {
                 </button>
               </>
             ) : (
-              supabaseConfigured && <NavLink to="/login" className="btn-primary">Sign in</NavLink>
+              supabaseConfigured && <NavLink to="/login" className="btn-primary whitespace-nowrap">Sign in</NavLink>
             )}
           </div>
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-screen-2xl flex-1 px-4 py-5">
+      <main className="mx-auto flex min-h-0 w-full max-w-screen-2xl flex-1 flex-col overflow-y-auto px-4 pt-4">
         <Routes>
           <Route path="/" element={<CardsPage />} />
           <Route path="/login" element={supabaseConfigured ? <LoginPage /> : <SetupPage />} />
@@ -73,9 +75,8 @@ export function App() {
         </Routes>
       </main>
 
-      <footer className="border-t border-ink-800 px-4 py-4 text-center text-xs text-slate-500">
+      <footer className="shrink-0 truncate border-t border-ink-800 px-4 py-1.5 text-center text-[11px] text-slate-500" title={`Card data synced ${new Date(SYNCED_AT).toLocaleDateString()}`}>
         Unofficial fan-made tool, not endorsed by Riot Games. Riftbound card names, text and art © Riot Games.
-        {' '}Card data synced {new Date(SYNCED_AT).toLocaleDateString()}.
       </footer>
     </div>
   );

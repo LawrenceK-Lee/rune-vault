@@ -6,6 +6,7 @@ import { usePersistentState } from '../hooks/usePersistentState';
 import { usePrices } from '../hooks/usePrices';
 import { useMoney } from '../hooks/useMoney';
 import { PriceBar } from '../components/PriceBar';
+import { ScrollPage } from '../components/ScrollPage';
 import { downloadFile } from '../lib/ui';
 import { FilterBar } from '../components/FilterBar';
 import { CardGrid } from '../components/CardGrid';
@@ -100,8 +101,8 @@ export function CollectionPage() {
   if (col.isLoading) return <Spinner label="Loading your collection…" />;
 
   return (
-    <div className="space-y-5">
-      <div className="flex flex-wrap items-end justify-between gap-3">
+    <ScrollPage>
+      <div className="flex shrink-0 flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="heading text-2xl">My Collection</h1>
           <p className="text-sm text-slate-400">
@@ -126,35 +127,10 @@ export function CollectionPage() {
         </div>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {stats.perSet.map((s) => {
-          const pct = s.unique ? Math.round((s.ownedUnique / s.unique) * 100) : 0;
-          return (
-            <button
-              key={s.id}
-              type="button"
-              onClick={() => setFilters({ ...filters, sets: filters.sets.length === 1 && filters.sets[0] === s.id ? [] : [s.id] })}
-              className={`panel p-3 text-left transition-colors hover:border-gold-400/50 ${filters.sets.length === 1 && filters.sets[0] === s.id ? 'border-gold-400/70' : ''}`}
-            >
-              <div className="flex items-baseline justify-between">
-                <span className="font-semibold">{s.name}</span>
-                <span className="text-sm tabular-nums text-gold-300">{pct}%</span>
-              </div>
-              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-ink-700">
-                <div className="h-full rounded-full bg-gold-400" style={{ width: `${pct}%` }} />
-              </div>
-              <p className="mt-1.5 text-xs text-slate-400 tabular-nums">
-                {s.ownedUnique}/{s.unique} cards · {s.ownedPrintings}/{s.cardCount} printings incl. alt arts
-              </p>
-            </button>
-          );
-        })}
-      </div>
-
       <ErrorNote error={col.error} />
-      {message && <div className="rounded-lg border border-ink-600 bg-ink-800 px-3 py-2 text-sm text-slate-200">{message}</div>}
+      {message && <div className="shrink-0 rounded-lg border border-ink-600 bg-ink-800 px-3 py-2 text-sm text-slate-200">{message}</div>}
       {quickAdd && (
-        <p className="text-sm text-gold-300">
+        <p className="shrink-0 text-sm text-gold-300">
           Quick add: type a card name or code and press <kbd className="rounded bg-ink-700 px-1.5">Enter</kbd> to add one copy of the top result.
         </p>
       )}
@@ -176,10 +152,36 @@ export function CollectionPage() {
       <CardGrid
         cards={cards}
         empty={stats.distinct ? 'No cards match these filters.' : 'Your collection is empty. Use Quick add, or add cards from the Cards page.'}
+        header={
+          <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {stats.perSet.map((s) => {
+              const pct = s.unique ? Math.round((s.ownedUnique / s.unique) * 100) : 0;
+              return (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => setFilters({ ...filters, sets: filters.sets.length === 1 && filters.sets[0] === s.id ? [] : [s.id] })}
+                  className={`panel p-3 text-left transition-colors hover:border-gold-400/50 ${filters.sets.length === 1 && filters.sets[0] === s.id ? 'border-gold-400/70' : ''}`}
+                >
+                  <div className="flex items-baseline justify-between">
+                    <span className="font-semibold">{s.name}</span>
+                    <span className="text-sm tabular-nums text-gold-300">{pct}%</span>
+                  </div>
+                  <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-ink-700">
+                    <div className="h-full rounded-full bg-gold-400" style={{ width: `${pct}%` }} />
+                  </div>
+                  <p className="mt-1.5 text-xs text-slate-400 tabular-nums">
+                    {s.ownedUnique}/{s.unique} cards · {s.ownedPrintings}/{s.cardCount} printings incl. alt arts
+                  </p>
+                </button>
+              );
+            })}
+          </div>
+        }
         renderCard={(c) => <CardTile card={c} onOpen={setOpen} price={pricesOn ? prices.priceOf(c.id) : undefined} owned={col.qty(c.id)} onOwnedChange={(n) => col.setQty(c.id, n)} />}
       />
 
       {open && <CardDetailModal card={open} onClose={close} onSelect={setOpen} qty={col.qty} setQty={col.setQty} />}
-    </div>
+    </ScrollPage>
   );
 }
