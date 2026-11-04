@@ -30,6 +30,16 @@
     background-size: 100% 100%;
   }
 
+  /* Radio buttons to match: dark ring, gold dot when selected. */
+  input[type='radio'] {
+    @apply relative h-[1.1rem] w-[1.1rem] shrink-0 cursor-pointer appearance-none rounded-full border border-ink-600 bg-ink-900
+      transition-colors hover:border-gold-400/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-400/50;
+  }
+  input[type='radio']:checked {
+    @apply border-gold-400;
+    background-image: radial-gradient(circle, theme('colors.gold.400') 0 38%, transparent 42%);
+  }
+
   /* Scrollbars that sit back in the dark background instead of standing out. */
   * { scrollbar-width: thin; scrollbar-color: theme('colors.ink.700') transparent; }
   ::-webkit-scrollbar { width: 10px; height: 10px; }

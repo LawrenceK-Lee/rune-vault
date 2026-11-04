@@ -13,6 +13,9 @@ import { CardGrid } from '../components/CardGrid';
 import { CardTile } from '../components/CardTile';
 import { CardDetailModal } from '../components/CardDetailModal';
 import { ErrorNote, Spinner } from '../components/bits';
+import { Menu } from '../components/Menu';
+import { ImportCollectionModal, type ImportMode } from '../components/ImportCollectionModal';
+import type { ParsedCollection } from '../lib/collectionImport';
 
 const csvCell = (v: string | number) => (/[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v));
 
@@ -28,7 +31,8 @@ export function CollectionPage() {
   const { format: formatPrice } = useMoney();
   const [showPrices, setShowPrices] = usePersistentState('showPrices', true);
   const pricesOn = showPrices && prices.available;
-  const fileRef = useRef<HTMLInputElement>(null);
+  const [importing, setImporting] = useState(false);
+  const closeImport = useCallback(() => setImporting(false), []);
 
   // Quick add searches every card (owned or not) so new pulls can be logged fast.
   const effective = useMemo(() => (quickAdd ? { ...filters, owned: 'all' as const } : filters), [quickAdd, filters]);
@@ -76,16 +80,14 @@ export function CollectionPage() {
     }
     downloadFile(`riftbound-collection-${new Date().toISOString().slice(0, 10)}.csv`, lines.join('\n'), 'text/csv');
   }
-  async function importJson(file: File) {
-    setMessage(null);
-    try {
-      const parsed = JSON.parse(await file.text());
-      if (!Array.isArray(parsed)) throw new Error('Expected a JSON array exported from this app.');
-      const n = await col.importRows(parsed.map((r) => ({ card_id: String(r.card_id), quantity: Number(r.quantity) })));
-      setMessage(`Imported ${n} cards. Existing quantities for those cards were replaced.`);
-    } catch (e) {
-      setMessage(`Import failed: ${e instanceof Error ? e.message : e}`);
-    }
+  async function runImport(parsed: ParsedCollection, mode: ImportMode) {
+    const rows = parsed.items.map(({ card, quantity }) => ({ card_id: card.id, quantity: mode === 'add' ? col.qty(card.id) + quantity : quantity }));
+    const n = await col.importRows(rows);
+    setImporting(false);
+    setMessage(
+      `Imported ${n.toLocaleString()} cards (${parsed.copies.toLocaleString()} copies) — ${mode === 'add' ? 'added to your collection' : 'counts replaced'}.` +
+        (parsed.unknown.length ? ` ${parsed.unknown.length} row(s) weren't recognised and were skipped.` : ''),
+    );
   }
 
   // In quick-add mode, Enter adds one copy of the top search result.
@@ -118,12 +120,22 @@ export function CollectionPage() {
           <button type="button" className={quickAdd ? 'btn-primary' : 'btn-ghost'} onClick={() => { setQuickAdd((q) => !q); setTimeout(() => searchRef.current?.focus()); }}>
             {quickAdd ? 'Quick add: on' : 'Quick add'}
           </button>
-          <button type="button" className="btn-ghost" onClick={exportCsv} disabled={!col.rows.length}>Export CSV</button>
-          <button type="button" className="btn-ghost" onClick={exportJson} disabled={!col.rows.length}>Export JSON</button>
-          <button type="button" className="btn-ghost" onClick={() => fileRef.current?.click()} disabled={col.importing}>
-            {col.importing ? 'Importing…' : 'Import JSON'}
-          </button>
-          <input ref={fileRef} type="file" accept="application/json,.json" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) importJson(f); e.target.value = ''; }} />
+          <Menu
+            label="Import / Export"
+            sections={[
+              {
+                title: 'Import',
+                items: [{ label: 'Import from file…', hint: 'Excel (.xlsx), CSV or JSON', onSelect: () => { setMessage(null); setImporting(true); } }],
+              },
+              {
+                title: 'Export',
+                items: [
+                  { label: 'Export as CSV', hint: 'Opens in Excel or Google Sheets', onSelect: exportCsv, disabled: !col.rows.length },
+                  { label: 'Export as JSON', hint: 'Full backup you can import here later', onSelect: exportJson, disabled: !col.rows.length },
+                ],
+              },
+            ]}
+          />
         </div>
       </div>
 
@@ -182,6 +194,7 @@ export function CollectionPage() {
       />
 
       {open && <CardDetailModal card={open} onClose={close} onSelect={setOpen} qty={col.qty} setQty={col.setQty} />}
+      {importing && <ImportCollectionModal onClose={closeImport} onImport={runImport} busy={col.importing} owned={col.qty} />}
     </ScrollPage>
   );
 }

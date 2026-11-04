@@ -50,7 +50,11 @@ export default defineConfig({
     rollupOptions: {
       output: {
         // Card data changes rarely; keep it in its own long-cached chunk.
-        manualChunks: (id) => (id.includes('/src/data/') ? 'card-data' : id.includes('node_modules') ? 'vendor' : undefined),
+        // Spreadsheet-reading libraries stay out of 'vendor' so they load only when someone imports a file.
+        manualChunks: (id) =>
+          id.includes('/src/data/') ? 'card-data'
+          : /node_modules\/(read-excel-file|fflate|saxen|unzipper-esm|worker-f)\//.test(id) ? undefined
+          : id.includes('node_modules') ? 'vendor' : undefined,
       },
     },
     chunkSizeWarningLimit: 1500,

@@ -3,7 +3,7 @@
 A web app (installable as a PWA) for the Riftbound TCG:
 
 - **Cards**: browse every card and printing (1,400+), with search and filters for domain, type, rarity, set and energy cost.
-- **Collection**: track how many copies of each printing you own. Includes set-completion progress, a quick-add mode for logging packs, and CSV/JSON export plus JSON import.
+- **Collection**: track how many copies of each printing you own. Includes set-completion progress, a quick-add mode for logging packs, and an Import / Export menu: import from Excel (.xlsx), CSV or JSON (TCGplayer-style Set + Card Number columns, codes like OGN-066, or card names, with a preview and a choice to add to or replace your counts), and export to CSV or JSON.
 - **Decks**: build decks that are checked live against the Constructed rules, or import one by pasting a decklist, and see which cards you still need to get.
 
 Browsing cards works with no setup. The collection and decks need a free Supabase project.

@@ -54,7 +54,7 @@ for (const c of ALL_CARDS) {
 }
 const CODE_RE = /\b([A-Z]{2,4})-?(\d{1,3}[a-z*]?|[A-Z]{1,2}\d{1,3}[a-z]?)(?:\/\d{1,3})?\b/i;
 
-function findByCode(text: string): Card | undefined {
+export function findByCode(text: string): Card | undefined {
   const m = text.match(CODE_RE);
   if (!m) return undefined;
   const set = m[1].toUpperCase();
@@ -88,7 +88,8 @@ function splitQuantity(line: string): { qty: number; rest: string } {
   return { qty: 1, rest: line };
 }
 
-function resolve(text: string, notes: string[]): Card | undefined {
+/** Match a card by collector code or name. Ambiguous names add a note and use the first match. */
+export function findCard(text: string, notes: string[]): Card | undefined {
   const byCode = findByCode(text);
   if (byCode) return byCode;
   const nameOnly = text.replace(/\([^)]*\)|\[[^\]]*\]/g, ' ').trim();
@@ -146,7 +147,7 @@ export function parseDecklist(text: string): ParsedDecklist {
     }
 
     const { qty: n, rest } = splitQuantity(line);
-    const card = resolve(rest, out.notes);
+    const card = findCard(rest, out.notes);
     if (!card) {
       out.unknown.push(raw.trim());
       continue;
