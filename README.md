@@ -4,7 +4,7 @@ A web app (installable as a PWA) for the Riftbound TCG:
 
 - **Cards**: browse every card and printing (1,400+), with search and filters for domain, type, rarity, set and energy cost.
 - **Collection**: track how many copies of each printing you own. Includes set-completion progress, a quick-add mode for logging packs, and CSV/JSON export plus JSON import.
-- **Decks**: build decks that are checked live against the Constructed rules, and see which cards you still need to get.
+- **Decks**: build decks that are checked live against the Constructed rules, or import one by pasting a decklist, and see which cards you still need to get.
 
 Browsing cards works with no setup. The collection and decks need a free Supabase project.
 
@@ -21,7 +21,50 @@ npm run dev                  # http://localhost:5173
 1. Create a free project at [supabase.com](https://supabase.com).
 2. Open **SQL Editor**, paste in [supabase/migrations/0001_init.sql](supabase/migrations/0001_init.sql), and run it. This creates the `collection_items`, `decks` and `deck_cards` tables, with row-level security so each user only sees their own data.
 3. In **Project Settings → API Keys**, copy the **publishable** key (`sb_publishable_...`), and copy the Project URL from **Project Settings → Data API**. Put both in `.env.local`. Never use the **secret** key (`sb_secret_...`) in this app: anything in a `VITE_` variable is shipped to every visitor's browser.
-4. Optional: under **Authentication → URL Configuration**, add your site URL (for example `http://localhost:5173`) so email confirmation and magic links redirect correctly. If you want sign-up to work without email confirmation while developing, turn off "Confirm email" under **Authentication → Providers → Email**.
+4. Run [supabase/migrations/0002_accounts.sql](supabase/migrations/0002_accounts.sql) in the SQL Editor too. It adds usernames, a `profiles` table, and sign-in by username.
+5. Deploy the username sign-up function (details below).
+6. Configure sign-in (details below).
+
+### Accounts and sign-in
+
+People can sign in four ways:
+- Google
+- Discord
+- Email and password
+- Username and password
+
+Username accounts don't need an email; the player can connect one later in **Account settings**. Account settings also lets players change their username, email or password, and connect or disconnect Google and Discord.
+
+**1. Deploy the username sign-up function.** Supabase Auth always needs an email address, so a separate Edge Function creates username-only accounts with a private placeholder email.
+1. In the dashboard, open **Edge Functions → Deploy a new function → Via Editor**.
+2. Name it `create-username-account` and paste in [supabase/functions/create-username-account/index.ts](supabase/functions/create-username-account/index.ts).
+3. In the function's settings, turn **off** "Verify JWT", because people calling it aren't signed in yet.
+
+**2. Authentication settings in the Supabase dashboard:**
+- **URL Configuration:**
+  - Set the **Site URL** to where the app runs, for example `http://localhost:5173`.
+  - Add `http://localhost:5173/**` to **Redirect URLs**, plus your deployed site's URL with `/**` later.
+- **Sign In / Providers:** turn on **Allow manual linking** so players can connect Google or Discord to an existing account.
+- **Emails → Secure email change:** turn this **off**. Username-only accounts have no real email to confirm from, so with it on they could never connect an email. With it off, changing an email only needs confirmation from the new address.
+
+**3. Discord** (about 5 minutes):
+1. At [discord.com/developers/applications](https://discord.com/developers/applications), click **New Application** and name it "Rift Unbound".
+2. Under **OAuth2**, add the redirect `https://<your-project-ref>.supabase.co/auth/v1/callback`.
+3. Copy the **Client ID** and **Client Secret**. You may need to reset the secret to see it.
+4. In Supabase, open **Authentication → Sign In / Providers → Discord**. Enable it, paste both values, and save.
+
+**4. Google** (about 10 minutes):
+1. In the [Google Cloud Console](https://console.cloud.google.com), create a project.
+2. Open **APIs & Services → OAuth consent screen**. Choose **External**, then fill in the app name and support email. Add scopes `email`, `profile` and `openid`.
+3. Open **Credentials → Create credentials → OAuth client ID** and choose **Web application**:
+   - **Authorized JavaScript origins:** `http://localhost:5173`, plus your deployed URL later.
+   - **Authorized redirect URIs:** `https://<your-project-ref>.supabase.co/auth/v1/callback`.
+4. Copy the Client ID and Client secret into Supabase under **Authentication → Sign In / Providers → Google**, and enable it.
+5. While the consent screen is in "Testing" mode, only accounts you add as test users can sign in. Click **Publish app** to open it to everyone.
+
+The sign-in page only shows the Google and Discord buttons once those providers are enabled in Supabase.
+
+**About sign in by username:** Supabase Auth only signs in by email. For a username, the app calls the database function `email_for_username_login`. That function returns the account's email only if the password is correct, so it never reveals anyone's email address. It also locks a username for 15 minutes after 10 failed attempts.
 
 ## Card data
 

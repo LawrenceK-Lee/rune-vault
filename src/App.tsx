@@ -10,6 +10,9 @@ import { DecksPage } from './pages/DecksPage';
 import { DeckEditorPage } from './pages/DeckEditorPage';
 import { LoginPage } from './pages/LoginPage';
 import { SetupPage } from './pages/SetupPage';
+import { AccountPage } from './pages/AccountPage';
+import { useProfile } from './hooks/useAccount';
+import { isPlaceholderEmail } from './lib/auth';
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { session, loading } = useAuth();
@@ -25,7 +28,9 @@ const navLink = ({ isActive }: { isActive: boolean }) =>
 
 export function App() {
   const { session } = useAuth();
+  const { profile } = useProfile();
   const qc = useQueryClient();
+  const accountName = profile?.username ?? (isPlaceholderEmail(session?.user.email) ? 'Account' : session?.user.email);
 
   return (
     // Fixed-height shell: the header stays put, and each page scrolls inside <main>.
@@ -45,10 +50,15 @@ export function App() {
           <div className="ml-auto flex items-center gap-2 text-sm">
             {session ? (
               <>
-                <span className="hidden max-w-[16ch] truncate text-slate-400 md:inline" title={session.user.email}>{session.user.email}</span>
+                <NavLink to="/account" className={({ isActive }) => `hidden max-w-[18ch] truncate rounded-lg px-2 py-1.5 sm:inline ${isActive ? 'text-gold-300' : 'text-slate-400 hover:text-white'}`} title="Account settings">
+                  {accountName}
+                </NavLink>
+                <NavLink to="/account" className="rounded-lg p-1.5 text-slate-400 hover:text-white sm:hidden" aria-label="Account settings">
+                  <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="8" r="4" /><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6" strokeLinecap="round" /></svg>
+                </NavLink>
                 <button
                   type="button"
-                  className="btn-ghost"
+                  className="btn-ghost whitespace-nowrap"
                   onClick={async () => {
                     await supabase.auth.signOut();
                     qc.clear();
@@ -71,6 +81,7 @@ export function App() {
           <Route path="/collection" element={<RequireAuth><CollectionPage /></RequireAuth>} />
           <Route path="/decks" element={<RequireAuth><DecksPage /></RequireAuth>} />
           <Route path="/decks/:deckId" element={<RequireAuth><DeckEditorPage /></RequireAuth>} />
+          <Route path="/account" element={<RequireAuth><AccountPage /></RequireAuth>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>

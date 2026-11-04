@@ -6,6 +6,7 @@ import { cardImage } from '../lib/ui';
 import { toDeckInput, useDeckList, useDeckMutations, type DeckWithCards } from '../hooks/useDecks';
 import { useCollection } from '../hooks/useCollection';
 import { DomainDots, ErrorNote, Spinner } from '../components/bits';
+import { ImportDeckModal } from '../components/ImportDeckModal';
 
 function DeckCard({ deck, qtyBase, onDelete }: { deck: DeckWithCards; qtyBase: (k: string) => number; onDelete: () => void }) {
   const [confirming, setConfirming] = useState(false);
@@ -60,21 +61,31 @@ export function DecksPage() {
   const { create, remove } = useDeckMutations();
   const col = useCollection();
   const navigate = useNavigate();
+  const [importing, setImporting] = useState(false);
 
   async function newDeck() {
     const d = await create.mutateAsync({ name: 'New deck' });
     navigate(`/decks/${d.id}`);
   }
 
+  const buttons = (
+    <div className="flex flex-wrap gap-2">
+      <button type="button" className="btn-ghost" onClick={() => { create.reset(); setImporting(true); }}>
+        Import decklist
+      </button>
+      <button type="button" className="btn-primary" onClick={newDeck} disabled={create.isPending}>
+        + New deck
+      </button>
+    </div>
+  );
+
   return (
     <div className="space-y-5 pb-6">
       <div className="flex items-center justify-between gap-3">
         <h1 className="heading text-2xl">My Decks</h1>
-        <button type="button" className="btn-primary" onClick={newDeck} disabled={create.isPending}>
-          + New deck
-        </button>
+        {buttons}
       </div>
-      <ErrorNote error={decks.error ?? create.error ?? remove.error} />
+      <ErrorNote error={decks.error ?? (importing ? null : create.error) ?? remove.error} />
       {decks.isLoading ? (
         <Spinner />
       ) : decks.data?.length ? (
@@ -85,11 +96,24 @@ export function DecksPage() {
         </div>
       ) : (
         <div className="panel px-6 py-12 text-center text-slate-400">
-          <p className="mb-4">No decks yet. Start one by picking a Legend.</p>
-          <button type="button" className="btn-primary" onClick={newDeck} disabled={create.isPending}>
-            + New deck
-          </button>
+          <p className="mb-4">No decks yet. Start one by picking a Legend, or import a decklist.</p>
+          <div className="flex justify-center">{buttons}</div>
         </div>
+      )}
+      {importing && (
+        <ImportDeckModal
+          onClose={() => setImporting(false)}
+          busy={create.isPending}
+          error={create.error}
+          onImport={async (d) => {
+            try {
+              const deck = await create.mutateAsync({ name: d.name, legend_id: d.legendId, champion_id: d.championId, entries: d.entries });
+              navigate(`/decks/${deck.id}`);
+            } catch {
+              /* shown in the dialog via create.error */
+            }
+          }}
+        />
       )}
     </div>
   );

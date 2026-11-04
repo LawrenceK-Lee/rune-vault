@@ -69,6 +69,54 @@ function LegendPicker({ onPick, current }: { onPick: (c: Card) => void; current:
   );
 }
 
+// ---------------------------------------------------------------- champion picker
+function ChampionPicker({
+  legend,
+  current,
+  onPick,
+  ownedBase,
+}: {
+  legend: Card;
+  current: string | null;
+  onPick: (c: Card) => void;
+  ownedBase: (baseKey: string) => number;
+}) {
+  const tag = legendChampion(legend);
+  const [allPrintings, setAllPrintings] = useState(false);
+  const options = useMemo(
+    () =>
+      (allPrintings ? ALL_CARDS : UNIQUE_CARDS).filter(
+        (c) => c.type === 'unit' && c.supertypes.includes('champion') && !!tag && c.tags.includes(tag),
+      ),
+    [allPrintings, tag],
+  );
+  return (
+    <div className="flex min-h-0 flex-1 flex-col gap-3">
+      <label className="flex shrink-0 cursor-pointer items-center gap-2 text-sm text-slate-300">
+        <input type="checkbox" checked={allPrintings} onChange={(e) => setAllPrintings(e.target.checked)} />
+        Show alt-art and promo printings
+      </label>
+      <div className="grid min-h-0 flex-1 grid-cols-[repeat(auto-fill,minmax(170px,1fr))] content-start gap-4 overflow-y-auto overscroll-contain pb-6 pt-1">
+        {options.map((c) => {
+          const owned = ownedBase(c.baseKey);
+          const offDomain = !fitsDomains(c, legend);
+          return (
+            <button key={c.id} type="button" onClick={() => onPick(c)} className={`text-left ${current === c.id ? 'rounded-lg ring-2 ring-gold-400' : ''}`}>
+              <img src={cardImage(c)} alt={displayName(c)} loading="lazy" className="w-full rounded-[4.5%/3.3%] ring-1 ring-ink-700 hover:ring-gold-400/60" style={{ aspectRatio: '744 / 1039' }} />
+              <span className="mt-1 block truncate text-sm font-medium">{displayName(c)}</span>
+              <span className="block truncate text-xs text-slate-400">
+                {c.publicCode}
+                {owned > 0 ? <span className="text-emerald-300"> · you own {owned}</span> : ''}
+                {offDomain ? <span className="text-amber-300"> · off-domain</span> : ''}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ---------------------------------------------------------------- deck list (right side)
 function DeckRow({
   card,
@@ -116,6 +164,7 @@ export function DeckEditorPage() {
   const [tournament, setTournament] = usePersistentState('deck.tournament', true);
   const [tab, setTab] = useState<'add' | 'deck'>('add');
   const [pickingLegend, setPickingLegend] = useState(false);
+  const [pickingChampion, setPickingChampion] = useState(false);
   const [legalOnly, setLegalOnly] = usePersistentState('deck.legalOnly', true);
   const [filters, setFilters] = usePersistentState<CardFilters>('deck.filters', EMPTY_FILTERS);
   const [sort, setSort] = usePersistentState<SortKey>('deck.sort', 'energy');
@@ -231,19 +280,35 @@ export function DeckEditorPage() {
       </div>
       <LegendPicker onPick={setLegend} current={draft.legendId} />
     </div>
+  ) : pickingChampion || !champion ? (
+    <div className="flex min-h-0 flex-1 flex-col gap-3">
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-2">
+        <div>
+          <h2 className="heading text-lg">{champion ? 'Change Chosen Champion' : 'Step 2 · Choose your Chosen Champion'}</h2>
+          <p className="text-sm text-slate-400">
+            Your Chosen Champion must be a {tag} champion unit. It counts as one card in your main deck.
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <button type="button" className="btn-ghost" onClick={() => setPickingLegend(true)}>Change Legend</button>
+          {champion && <button type="button" className="btn-ghost" onClick={() => setPickingChampion(false)}>Cancel</button>}
+        </div>
+      </div>
+      <ChampionPicker
+        legend={legend}
+        current={draft.championId}
+        ownedBase={col.qtyBase}
+        onPick={(c) => {
+          ed.update((d) => ({ ...d, championId: c.id }));
+          setPickingChampion(false);
+        }}
+      />
+    </div>
   ) : (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
-      {!champion && (
-        <div className="shrink-0 rounded-lg border border-gold-400/40 bg-gold-400/10 px-3 py-2 text-sm text-gold-300">
-          Step 2 · Choose your Chosen Champion: a {tag} champion unit. Use <b>★ Champion</b> on a card below.
-          <button type="button" className="ml-2 underline" onClick={() => setFilters({ ...EMPTY_FILTERS, query: tag ?? '', types: ['unit'] })}>
-            Show {tag} units
-          </button>
-        </div>
-      )}
       <FilterBar filters={filters} onChange={setFilters} sort={sort} onSort={setSort} showOwned resultCount={pool.length} pricesAvailable={prices.available} domainOptions={domainOptions} />
       <label className="flex shrink-0 cursor-pointer items-center gap-2 text-sm text-slate-300">
-        <input type="checkbox" className="h-4 w-4 accent-gold-400" checked={legalOnly} onChange={(e) => setLegalOnly(e.target.checked)} />
+        <input type="checkbox" checked={legalOnly} onChange={(e) => setLegalOnly(e.target.checked)} />
         Only show cards legal for {legendChampion(legend)} ({legend.domains.map(cap).join(' / ')})
       </label>
       <PriceBar show={showPrices} onChange={setShowPrices} />
@@ -254,7 +319,6 @@ export function DeckEditorPage() {
           const zone = defaultZone(c);
           const n = inDeck(c.id, zone);
           const side = zone === 'main' ? inDeck(c.id, 'sideboard') : 0;
-          const isChamp = draft.championId === c.id;
           return (
             <CardTile
               card={c}
@@ -273,15 +337,6 @@ export function DeckEditorPage() {
                       </button>
                     )}
                   </div>
-                  {isChampionOption(c) && (
-                    <button
-                      type="button"
-                      className={`btn w-full px-1 py-1 text-xs ${isChamp ? 'bg-gold-400 text-ink-950' : 'border border-gold-400/50 text-gold-300 hover:bg-gold-400/10'}`}
-                      onClick={() => ed.update((d) => ({ ...d, championId: isChamp ? null : c.id }))}
-                    >
-                      {isChamp ? '★ Chosen Champion' : '★ Champion'}
-                    </button>
-                  )}
                 </div>
               }
             />
@@ -295,7 +350,7 @@ export function DeckEditorPage() {
   const deckPanel = (
     <div className="space-y-4 pb-6">
       <div className="grid grid-cols-2 gap-2">
-        {([['Legend', legend, () => setPickingLegend(true)], ['Chosen Champion', champion, () => champion && setOpen(champion)]] as const).map(
+        {([['Legend', legend, () => { setPickingLegend(true); setTab('add'); }], ['Chosen Champion', champion, () => { if (legend) { setPickingChampion(true); setTab('add'); } }]] as const).map(
           ([label, c, onClick]) => (
             <button key={label} type="button" onClick={onClick} className={`panel flex items-center gap-2 p-2 text-left hover:border-gold-400/50 ${c && flagged.has(c.id) ? 'border-red-700' : ''}`}>
               <div className="h-14 w-10 shrink-0 overflow-hidden rounded bg-ink-700">{c && <img src={cardImage(c)} alt="" className="h-full w-full object-cover" />}</div>
@@ -354,7 +409,7 @@ export function DeckEditorPage() {
         <h3 className="mb-2 flex items-center justify-between text-sm font-semibold">
           <span>{summary.isLegal ? '✓ Deck is legal' : 'Deck checks'}</span>
           <label className="flex cursor-pointer items-center gap-1.5 text-xs font-normal text-slate-400">
-            <input type="checkbox" className="accent-gold-400" checked={tournament} onChange={(e) => setTournament(e.target.checked)} />
+            <input type="checkbox" checked={tournament} onChange={(e) => setTournament(e.target.checked)} />
             Tournament (exactly 40)
           </label>
         </h3>

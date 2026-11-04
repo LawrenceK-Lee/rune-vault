@@ -142,7 +142,7 @@ export function FilterBar({
             )}
             {!hide.includes('variants') && (
               <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-300">
-                <input type="checkbox" className="h-4 w-4 accent-gold-400" checked={filters.showVariants} onChange={(e) => set({ showVariants: e.target.checked })} />
+                <input type="checkbox" checked={filters.showVariants} onChange={(e) => set({ showVariants: e.target.checked })} />
                 Show alt arts, signed &amp; promo printings
               </label>
             )}

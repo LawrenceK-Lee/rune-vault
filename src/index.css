@@ -14,7 +14,34 @@
     padding-top: env(safe-area-inset-top);
     padding-bottom: env(safe-area-inset-bottom);
   }
-  input, select, textarea { @apply bg-ink-800 border border-ink-600 rounded-lg px-3 py-2 text-sm outline-none focus:border-gold-400; }
+  input:not([type='checkbox']):not([type='radio']), select, textarea {
+    @apply bg-ink-800 border border-ink-600 rounded-lg px-3 py-2 text-sm outline-none focus:border-gold-400;
+  }
+
+  /* Checkboxes: dark box with a gold border on hover, solid gold with a dark tick when checked. */
+  input[type='checkbox'] {
+    @apply relative h-[1.1rem] w-[1.1rem] shrink-0 cursor-pointer appearance-none rounded border border-ink-600 bg-ink-900
+      transition-colors hover:border-gold-400/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-400/50
+      disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  input[type='checkbox']:checked {
+    @apply border-gold-400 bg-gold-400;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.5 8.5l3 3 6-7' fill='none' stroke='%230b0f18' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-size: 100% 100%;
+  }
+
+  /* Scrollbars that sit back in the dark background instead of standing out. */
+  * { scrollbar-width: thin; scrollbar-color: theme('colors.ink.700') transparent; }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb {
+    background-color: theme('colors.ink.700');
+    border-radius: 9999px;
+    border: 3px solid transparent;
+    background-clip: content-box;
+  }
+  ::-webkit-scrollbar-thumb:hover { background-color: theme('colors.ink.600'); }
+  ::-webkit-scrollbar-corner { background: transparent; }
 }
 
 @layer components {
