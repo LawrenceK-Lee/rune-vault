@@ -40,7 +40,7 @@ export function App() {
         <div className="mx-auto flex max-w-screen-2xl items-center gap-2 px-4 py-2.5">
           <NavLink to="/" className="mr-2 flex items-center gap-2">
             <img src="/icon.svg" alt="" className="h-7 w-7" />
-            <span className="heading hidden text-lg sm:inline">Rift Unbound</span>
+            <span className="heading hidden text-lg sm:inline">Rune Vault</span>
           </NavLink>
           <nav className="flex items-center gap-1">
             <NavLink to="/" end className={navLink}>Cards</NavLink>

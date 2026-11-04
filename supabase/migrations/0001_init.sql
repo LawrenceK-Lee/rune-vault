@@ -1,4 +1,4 @@
--- Rift Unbound schema. Paste into Supabase -> SQL Editor and run once.
+-- Rune Vault schema. Paste into Supabase -> SQL Editor and run once.
 -- The card catalog is NOT stored here; card_id values match Card.id in src/data/cards.json.
 
 -- ---------------------------------------------------------------- collection

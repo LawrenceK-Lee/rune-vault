@@ -26,7 +26,7 @@ const pkg = JSON.parse(await readFile(resolve(root, 'package.json'), 'utf8'));
 
 const BASE = 'https://tcgcsv.com';
 const CATEGORY = 89; // Riftbound: League of Legends Trading Card Game
-const HEADERS = { 'User-Agent': `RiftUnbound/${pkg.version}` };
+const HEADERS = { 'User-Agent': `RuneVault/${pkg.version}` };
 const force = process.argv.includes('--force');
 const soft = process.argv.includes('--soft');
 

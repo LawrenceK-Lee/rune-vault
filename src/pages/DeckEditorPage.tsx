@@ -13,7 +13,7 @@ import {
   type CardFilters,
   type SortKey,
 } from '../lib/cards';
-import { RULES, defaultZone, fitsDomains, missingCards, validateDeck, type DeckEntry, type Zone } from '../lib/deckRules';
+import { RULES, copiesInDeck, defaultZone, fitsDomains, maxQuantity, missingCards, validateDeck, type DeckEntry, type Zone } from '../lib/deckRules';
 import { cap, cardImage } from '../lib/ui';
 import { useDeckEditor, type DeckDraft } from '../hooks/useDecks';
 import { useCollection } from '../hooks/useCollection';
@@ -299,7 +299,21 @@ export function DeckEditorPage() {
         current={draft.championId}
         ownedBase={col.qtyBase}
         onPick={(c) => {
-          ed.update((d) => ({ ...d, championId: c.id }));
+          ed.update((d) => {
+            // The Chosen Champion is one of the 3 allowed copies; drop an extra copy from the deck if needed.
+            const next = { ...d, championId: c.id };
+            let over = copiesInDeck(next, c.baseKey, CARDS_BY_ID) - RULES.maxCopies;
+            if (over <= 0) return next;
+            let entries = next.entries;
+            for (const zone of ['sideboard', 'main'] as const)
+              entries = entries.map((e) => {
+                if (over <= 0 || e.zone !== zone || CARDS_BY_ID.get(e.cardId)?.baseKey !== c.baseKey) return e;
+                const cut = Math.min(over, e.quantity);
+                over -= cut;
+                return { ...e, quantity: e.quantity - cut };
+              });
+            return { ...next, entries: entries.filter((e) => e.quantity > 0) };
+          });
           setPickingChampion(false);
         }}
       />
@@ -319,6 +333,9 @@ export function DeckEditorPage() {
           const zone = defaultZone(c);
           const n = inDeck(c.id, zone);
           const side = zone === 'main' ? inDeck(c.id, 'sideboard') : 0;
+          const full = n >= maxQuantity(draft, c.id, zone, CARDS_BY_ID);
+          const sideFull = zone === 'main' && side >= maxQuantity(draft, c.id, 'sideboard', CARDS_BY_ID);
+          const capTitle = `Max ${RULES.maxCopies} copies of a card (main deck, sideboard and Chosen Champion combined)`;
           return (
             <CardTile
               card={c}
@@ -328,11 +345,11 @@ export function DeckEditorPage() {
               footer={
                 <div className="mt-1 space-y-1">
                   <div className="flex gap-1">
-                    <button type="button" className="btn-ghost flex-1 px-1 py-1 text-xs" onClick={() => ed.add(c.id, zone)}>
-                      + {zone === 'main' ? 'Main' : zone === 'rune' ? 'Rune' : 'Field'}{n ? ` (${n})` : ''}
+                    <button type="button" className="btn-ghost flex-1 px-1 py-1 text-xs" disabled={full} title={full ? capTitle : undefined} onClick={() => ed.add(c.id, zone)}>
+                      {full ? `Max (${n})` : `+ ${zone === 'main' ? 'Main' : zone === 'rune' ? 'Rune' : 'Field'}${n ? ` (${n})` : ''}`}
                     </button>
                     {zone === 'main' && (
-                      <button type="button" className="btn-ghost px-1.5 py-1 text-xs" title="Add to sideboard" onClick={() => ed.add(c.id, 'sideboard')}>
+                      <button type="button" className="btn-ghost px-1.5 py-1 text-xs" disabled={sideFull} title={sideFull ? capTitle : 'Add to sideboard'} onClick={() => ed.add(c.id, 'sideboard')}>
                         SB{side ? ` ${side}` : ''}
                       </button>
                     )}
@@ -394,6 +411,7 @@ export function DeckEditorPage() {
                     needed={neededFor(c)}
                     flagged={flagged.has(c.id)}
                     onChange={(n) => ed.setQuantity(c.id, zone, n)}
+                    max={maxQuantity(draft, c.id, zone, CARDS_BY_ID)}
                     onOpen={() => setOpen(c)}
                   />
                 ))}

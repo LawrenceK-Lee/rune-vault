@@ -1,4 +1,4 @@
--- Rift Unbound: usernames + username login. Paste into Supabase -> SQL Editor and run once
+-- Rune Vault: usernames + username login. Paste into Supabase -> SQL Editor and run once
 -- (after 0001_init.sql).
 
 -- ---------------------------------------------------------------- profiles

@@ -1,4 +1,4 @@
-# Rift Unbound
+# Rune Vault
 
 A web app (installable as a PWA) for the Riftbound TCG:
 
@@ -48,7 +48,7 @@ Username accounts don't need an email; the player can connect one later in **Acc
 - **Emails → Secure email change:** turn this **off**. Username-only accounts have no real email to confirm from, so with it on they could never connect an email. With it off, changing an email only needs confirmation from the new address.
 
 **3. Discord** (about 5 minutes):
-1. At [discord.com/developers/applications](https://discord.com/developers/applications), click **New Application** and name it "Rift Unbound".
+1. At [discord.com/developers/applications](https://discord.com/developers/applications), click **New Application** and name it "Rune Vault".
 2. Under **OAuth2**, add the redirect `https://<your-project-ref>.supabase.co/auth/v1/callback`.
 3. Copy the **Client ID** and **Client Secret**. You may need to reset the secret to see it.
 4. In Supabase, open **Authentication → Sign In / Providers → Discord**. Enable it, paste both values, and save.

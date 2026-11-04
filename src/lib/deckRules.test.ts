@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ALL_CARDS, CARDS_BY_ID, UNIQUE_CARDS, legendChampion } from './cards';
-import { missingCards, validateDeck, type DeckEntry, type DeckInput } from './deckRules';
+import { maxQuantity, missingCards, validateDeck, type DeckEntry, type DeckInput } from './deckRules';
 import type { Card } from '../types/card';
 
 // Build a legal deck from the real card data: Jinx (Fury / Chaos).
@@ -142,5 +142,37 @@ describe('missingCards', () => {
     expect(lines.find((l) => l.baseKey === legend.baseKey)!.missing).toBe(0);
     const runeLine = lines.find((l) => l.baseKey === runes[0].baseKey)!;
     expect(runeLine.needed).toBe(6);
+  });
+});
+
+describe('maxQuantity (copy cap while editing)', () => {
+  const card = fillers[0];
+  const alt = ALL_CARDS.find((c) => c.baseKey === card.baseKey && c.id !== card.id);
+  const deck = (entries: DeckEntry[], championId: string | null = null): DeckInput => ({ legendId: legend.id, championId, entries });
+
+  it('allows up to 3 copies of a new card', () => {
+    expect(maxQuantity(deck([]), card.id, 'main', CARDS_BY_ID)).toBe(3);
+  });
+
+  it('counts main deck and sideboard together', () => {
+    const d = deck([{ cardId: card.id, zone: 'main', quantity: 2 }]);
+    expect(maxQuantity(d, card.id, 'main', CARDS_BY_ID)).toBe(3);
+    expect(maxQuantity(d, card.id, 'sideboard', CARDS_BY_ID)).toBe(1);
+  });
+
+  it('counts the Chosen Champion as a copy', () => {
+    expect(maxQuantity(deck([], champion.id), champion.id, 'main', CARDS_BY_ID)).toBe(2);
+  });
+
+  it('counts other printings of the same card', () => {
+    if (!alt) return;
+    const d = deck([{ cardId: alt.id, zone: 'main', quantity: 3 }]);
+    expect(maxQuantity(d, card.id, 'main', CARDS_BY_ID)).toBe(0);
+  });
+
+  it('does not cap runes, and never forces an over-limit deck down', () => {
+    expect(maxQuantity(deck([]), runes[0].id, 'rune', CARDS_BY_ID)).toBe(Infinity);
+    const d = deck([{ cardId: card.id, zone: 'main', quantity: 5 }]);
+    expect(maxQuantity(d, card.id, 'main', CARDS_BY_ID)).toBe(5);
   });
 });

@@ -29,6 +29,26 @@ export interface DeckInput {
   entries: DeckEntry[];
 }
 
+/** Copies of a card (every printing) that count toward the copy limit: main + sideboard + Chosen Champion. */
+export function copiesInDeck(deck: DeckInput, baseKey: string, cards: Map<string, Card>): number {
+  let n = deck.championId && cards.get(deck.championId)?.baseKey === baseKey ? 1 : 0;
+  for (const e of deck.entries)
+    if ((e.zone === 'main' || e.zone === 'sideboard') && cards.get(e.cardId)?.baseKey === baseKey) n += e.quantity;
+  return n;
+}
+
+/**
+ * Highest quantity one deck entry may have under the copy limit. Runes and battlefields
+ * have their own rules and aren't capped here. A deck already over the limit (e.g. an
+ * imported list) keeps its current count but can't grow.
+ */
+export function maxQuantity(deck: DeckInput, cardId: string, zone: Zone, cards: Map<string, Card>): number {
+  const card = cards.get(cardId);
+  if (!card || (zone !== 'main' && zone !== 'sideboard')) return Infinity;
+  const current = deck.entries.find((e) => e.cardId === cardId && e.zone === zone)?.quantity ?? 0;
+  return Math.max(current, current + RULES.maxCopies - copiesInDeck(deck, card.baseKey, cards));
+}
+
 export interface RuleIssue {
   level: 'error' | 'warning';
   message: string;

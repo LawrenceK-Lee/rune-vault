@@ -17,7 +17,7 @@ const outDir = resolve(root, 'src/data');
 async function loadHtml() {
   const local = process.argv[2];
   if (local) return readFile(local, 'utf8');
-  const res = await fetch(GALLERY_URL, { headers: { 'User-Agent': 'Mozilla/5.0 (rift-unbound card sync)' } });
+  const res = await fetch(GALLERY_URL, { headers: { 'User-Agent': 'Mozilla/5.0 (rune-vault card sync)' } });
   if (!res.ok) throw new Error(`Gallery request failed: ${res.status} ${res.statusText}`);
   return res.text();
 }

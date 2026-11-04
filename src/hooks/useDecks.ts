@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase, type DeckCardRow, type DeckRow } from '../lib/supabase';
-import type { DeckEntry, DeckInput, Zone } from '../lib/deckRules';
+import { maxQuantity, type DeckEntry, type DeckInput, type Zone } from '../lib/deckRules';
+import { CARDS_BY_ID } from '../lib/cards';
 import { useUserId } from './useAuth';
 
 export interface DeckWithCards extends DeckRow {
@@ -188,6 +189,7 @@ export function useDeckEditor(deckId: string) {
       update((d) => {
         const rest = d.entries.filter((e) => !(e.cardId === cardId && e.zone === zone));
         const idx = d.entries.findIndex((e) => e.cardId === cardId && e.zone === zone);
+        quantity = Math.min(quantity, maxQuantity(d, cardId, zone, CARDS_BY_ID));
         if (quantity <= 0) return { ...d, entries: rest };
         const entry = { cardId, zone, quantity };
         if (idx === -1) return { ...d, entries: [...d.entries, entry] };
@@ -202,7 +204,8 @@ export function useDeckEditor(deckId: string) {
     (cardId: string, zone: Zone, delta = 1) =>
       update((d) => {
         const cur = d.entries.find((e) => e.cardId === cardId && e.zone === zone)?.quantity ?? 0;
-        const q = cur + delta;
+        const q = Math.min(cur + delta, maxQuantity(d, cardId, zone, CARDS_BY_ID));
+        if (q === cur) return d;
         const rest = d.entries.filter((e) => !(e.cardId === cardId && e.zone === zone));
         if (q <= 0) return { ...d, entries: rest };
         if (cur === 0) return { ...d, entries: [...d.entries, { cardId, zone, quantity: q }] };
