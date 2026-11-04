@@ -4,6 +4,9 @@
 
 @layer base {
   :root { color-scheme: dark; }
+  /* Everything is sized in rem, so this scales the whole UI. */
+  html { font-size: 17px; }
+  @media (min-width: 1024px) { html { font-size: 18px; } }
   html { -webkit-tap-highlight-color: transparent; }
   body {
     @apply bg-ink-900 text-slate-100 antialiased;

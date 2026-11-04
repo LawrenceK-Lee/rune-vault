@@ -4,6 +4,3 @@ dev-dist
 .env.local
 .env.*.local
 *.log
-
-# generated daily by scripts/sync-prices.mjs (predev/prebuild)
-public/prices.json

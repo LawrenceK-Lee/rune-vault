@@ -47,7 +47,7 @@ export function QuantityStepper({
 }) {
   const btn =
     size === 'sm'
-      ? 'h-7 w-7 text-base'
+      ? 'h-8 w-8 text-lg'
       : 'h-9 w-9 text-lg';
   return (
     <div className="inline-flex items-center rounded-lg border border-ink-600 bg-ink-900/90" aria-label={label}>

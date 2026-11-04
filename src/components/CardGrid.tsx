@@ -40,10 +40,10 @@ export function CardGrid({
   return (
     <>
       <div
-        className={`grid gap-3 ${
+        className={`grid gap-4 ${
           dense
-            ? 'grid-cols-[repeat(auto-fill,minmax(110px,1fr))]'
-            : 'grid-cols-[repeat(auto-fill,minmax(140px,1fr))] sm:grid-cols-[repeat(auto-fill,minmax(170px,1fr))]'
+            ? 'grid-cols-[repeat(auto-fill,minmax(150px,1fr))] sm:grid-cols-[repeat(auto-fill,minmax(175px,1fr))]'
+            : 'grid-cols-[repeat(auto-fill,minmax(155px,1fr))] sm:grid-cols-[repeat(auto-fill,minmax(215px,1fr))]'
         }`}
       >
         {cards.slice(0, shown).map((c) => (

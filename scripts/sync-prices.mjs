@@ -10,7 +10,10 @@
 //
 // Usage: npm run sync-prices            (skips if already up to date)
 //        npm run sync-prices -- --force
-//        npm run sync-prices -- --soft   (never fail; used by predev/prebuild)
+//        npm run sync-prices -- --soft   (never fail; keep the existing file on errors)
+//
+// In production this runs daily from .github/workflows/update-prices.yml, which
+// commits the refreshed public/prices.json so the hosted site redeploys.
 
 import { readFile, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
@@ -34,6 +37,19 @@ async function get(path, as = 'json') {
   const res = await fetch(`${BASE}${path}`, { headers: HEADERS });
   if (!res.ok) throw new Error(`${path}: HTTP ${res.status}`);
   return as === 'json' ? res.json() : res.text();
+}
+
+/** USD exchange rates from the European Central Bank (via frankfurter.dev, free, no key). */
+async function fetchRates(previous) {
+  try {
+    const res = await fetch('https://api.frankfurter.dev/v1/latest?base=USD', { headers: HEADERS });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    return { rates: data.rates, ratesDate: data.date };
+  } catch (err) {
+    console.warn(`Exchange rates unavailable (${err.message}); keeping previous rates.`);
+    return { rates: previous?.rates ?? {}, ratesDate: previous?.ratesDate ?? null };
+  }
 }
 
 const round = (n) => (typeof n === 'number' ? Math.round(n * 100) / 100 : null);
@@ -82,12 +98,22 @@ async function main() {
     }
   }
 
+  const { rates, ratesDate } = await fetchRates(existing);
+
   const priced = Object.values(prices).filter((e) => e.n || e.f).length;
   if (priced < cards.length * 0.5) throw new Error(`Only ${priced} cards priced; refusing to overwrite prices.json.`);
 
   await writeFile(
     outFile,
-    JSON.stringify({ source: 'TCGplayer via TCGCSV', currency: 'USD', sourceUpdatedAt: lastUpdated, prices }),
+    JSON.stringify({
+      source: 'TCGplayer via TCGCSV',
+      currency: 'USD',
+      sourceUpdatedAt: lastUpdated,
+      syncedAt: new Date().toISOString(),
+      rates,
+      ratesDate,
+      prices,
+    }),
   );
   console.log(`Wrote prices for ${priced} of ${cards.length} printings (TCGCSV ${lastUpdated}).`);
 }

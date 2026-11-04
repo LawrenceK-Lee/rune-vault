@@ -18,8 +18,11 @@ export function FilterBar({
   searchRef,
   onSearchEnter,
   pricesAvailable = false,
+  domainOptions = DOMAINS,
 }: {
   pricesAvailable?: boolean;
+  /** Which domain chips to offer (e.g. only the Legend's domains in the deck editor). */
+  domainOptions?: Domain[];
   filters: CardFilters;
   onChange: (f: CardFilters) => void;
   sort: SortKey;
@@ -32,8 +35,9 @@ export function FilterBar({
 }) {
   const [open, setOpen] = useState(false);
   const set = (patch: Partial<CardFilters>) => onChange({ ...filters, ...patch });
+  const activeDomains = filters.domains.filter((d) => domainOptions.includes(d));
   const active =
-    filters.sets.length + filters.domains.length + filters.types.length + filters.rarities.length +
+    filters.sets.length + activeDomains.length + filters.types.length + filters.rarities.length +
     (filters.energyMin != null ? 1 : 0) + (filters.energyMax != null ? 1 : 0) + (filters.owned !== 'all' ? 1 : 0);
 
   return (
@@ -73,8 +77,8 @@ export function FilterBar({
 
       {!hide.includes('domains') && (
         <div className="flex flex-wrap gap-1.5">
-          {DOMAINS.map((d: Domain) => (
-            <button key={d} type="button" className={filters.domains.includes(d) ? 'chip-on' : 'chip-off'} onClick={() => set({ domains: toggle(filters.domains, d) })}>
+          {domainOptions.map((d: Domain) => (
+            <button key={d} type="button" className={activeDomains.includes(d) ? 'chip-on' : 'chip-off'} onClick={() => set({ domains: toggle(activeDomains, d) })}>
               <DomainDot domain={d} /> {d}
             </button>
           ))}

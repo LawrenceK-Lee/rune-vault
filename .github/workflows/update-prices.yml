@@ -1,0 +1,43 @@
+name: Update card prices
+
+# TCGCSV refreshes TCGplayer prices once a day at about 20:00 UTC.
+# Run a little after that, commit the new public/prices.json, and let the
+# hosting provider (Vercel / Netlify / etc.) redeploy from the new commit.
+on:
+  schedule:
+    - cron: '30 21 * * *' # 21:30 UTC daily
+  workflow_dispatch: # allow a manual run from the Actions tab
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-prices
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # The sync script only uses Node built-ins, so no npm install is needed.
+      - name: Fetch latest prices and exchange rates
+        run: node scripts/sync-prices.mjs
+
+      - name: Commit if prices changed
+        run: |
+          if git diff --quiet -- public/prices.json; then
+            echo "Prices unchanged."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/prices.json
+          git commit -m "Update card prices ($(date -u +%Y-%m-%d))"
+          git push

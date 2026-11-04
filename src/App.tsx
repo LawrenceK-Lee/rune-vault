@@ -30,7 +30,7 @@ export function App() {
   return (
     <div className="flex min-h-screen flex-col">
       <header className="sticky top-0 z-40 border-b border-ink-700 bg-ink-900/90 backdrop-blur" style={{ top: 'env(safe-area-inset-top, 0px)' }}>
-        <div className="mx-auto flex max-w-7xl items-center gap-2 px-4 py-2.5">
+        <div className="mx-auto flex max-w-screen-2xl items-center gap-2 px-4 py-2.5">
           <NavLink to="/" className="mr-2 flex items-center gap-2">
             <img src="/icon.svg" alt="" className="h-7 w-7" />
             <span className="heading hidden text-lg sm:inline">Rift Unbound</span>
@@ -62,7 +62,7 @@ export function App() {
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-5">
+      <main className="mx-auto w-full max-w-screen-2xl flex-1 px-4 py-5">
         <Routes>
           <Route path="/" element={<CardsPage />} />
           <Route path="/login" element={supabaseConfigured ? <LoginPage /> : <SetupPage />} />

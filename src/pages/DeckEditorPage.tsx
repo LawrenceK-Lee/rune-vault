@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router';
-import type { Card } from '../types/card';
+import { DOMAINS, type Card, type Domain } from '../types/card';
 import {
   ALL_CARDS,
   CARDS_BY_ID,
@@ -19,12 +19,14 @@ import { useDeckEditor, type DeckDraft } from '../hooks/useDecks';
 import { useCollection } from '../hooks/useCollection';
 import { usePersistentState } from '../hooks/usePersistentState';
 import { usePrices } from '../hooks/usePrices';
-import { cheapestCopy, formatPrice } from '../lib/prices';
+import { cheapestCopy } from '../lib/prices';
+import { useMoney } from '../hooks/useMoney';
 import { FilterBar } from '../components/FilterBar';
 import { CardGrid } from '../components/CardGrid';
 import { CardTile } from '../components/CardTile';
 import { CardDetailModal } from '../components/CardDetailModal';
 import { DomainDots, ErrorNote, QuantityStepper, Spinner } from '../components/bits';
+import { PriceBar } from '../components/PriceBar';
 
 const ZONE_LABEL: Record<Zone, string> = { main: 'Main deck', rune: 'Runes', battlefield: 'Battlefields', sideboard: 'Sideboard' };
 const TYPE_ORDER = ['unit', 'spell', 'gear'];
@@ -119,7 +121,8 @@ export function DeckEditorPage() {
   const [open, setOpen] = useState<Card | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
   const prices = usePrices();
-  const [showPrices] = usePersistentState('showPrices', true);
+  const { format: formatPrice } = useMoney();
+  const [showPrices, setShowPrices] = usePersistentState('showPrices', true);
 
   const draft = ed.draft;
   const legend = draft?.legendId ? CARDS_BY_ID.get(draft.legendId) ?? null : null;
@@ -135,11 +138,19 @@ export function DeckEditorPage() {
   const needByBase = useMemo(() => new Map(missing.map((l) => [l.baseKey, l])), [missing]);
   const flagged = useMemo(() => new Set(summary?.issues.flatMap((i) => i.cardIds ?? []) ?? []), [summary]);
 
+  // With a Legend chosen (and "legal only" on), only that Legend's domains + colorless are offered.
+  const domainOptions = useMemo<Domain[]>(
+    () => (legalOnly && legend ? [...legend.domains.filter((d) => d !== 'colorless'), 'colorless'] : DOMAINS),
+    [legalOnly, legend],
+  );
+
   const pool = useMemo(() => {
     let base = ALL_CARDS.filter((c) => !isToken(c) && c.type !== 'legend');
     if (legalOnly && legend) base = base.filter((c) => fitsDomains(c, legend) && (!c.supertypes.includes('signature') || (tag != null && c.tags.includes(tag))));
-    return filterCards(base, filters, sort, col.qty, prices.priceOf);
-  }, [legalOnly, legend, tag, filters, sort, col.qty, prices.priceOf]);
+    // Ignore any remembered domain chips that aren't offered for this Legend.
+    const effective = { ...filters, domains: filters.domains.filter((d) => domainOptions.includes(d)) };
+    return filterCards(base, effective, sort, col.qty, prices.priceOf);
+  }, [legalOnly, legend, tag, filters, domainOptions, sort, col.qty, prices.priceOf]);
 
   const inDeck = useCallback(
     (id: string, zone: Zone) => draft?.entries.find((e) => e.cardId === id && e.zone === zone)?.quantity ?? 0,
@@ -227,11 +238,12 @@ export function DeckEditorPage() {
           </button>
         </div>
       )}
-      <FilterBar filters={filters} onChange={setFilters} sort={sort} onSort={setSort} showOwned resultCount={pool.length} pricesAvailable={prices.available} />
+      <FilterBar filters={filters} onChange={setFilters} sort={sort} onSort={setSort} showOwned resultCount={pool.length} pricesAvailable={prices.available} domainOptions={domainOptions} />
       <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-300">
         <input type="checkbox" className="h-4 w-4 accent-gold-400" checked={legalOnly} onChange={(e) => setLegalOnly(e.target.checked)} />
         Only show cards legal for {legendChampion(legend)} ({legend.domains.map(cap).join(' / ')})
       </label>
+      <PriceBar show={showPrices} onChange={setShowPrices} />
       <CardGrid
         cards={pool}
         dense
@@ -464,7 +476,7 @@ export function DeckEditorPage() {
         </button>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_440px]">
         <div className={tab === 'add' ? '' : 'hidden lg:block'}>{addPanel}</div>
         <aside className={`${tab === 'deck' ? '' : 'hidden lg:block'} lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto lg:pr-1`}>{deckPanel}</aside>
       </div>

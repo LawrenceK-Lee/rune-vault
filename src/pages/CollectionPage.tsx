@@ -4,8 +4,8 @@ import { ALL_CARDS, CARDS_BY_ID, EMPTY_FILTERS, SETS, displayName, filterCards, 
 import { useCollection } from '../hooks/useCollection';
 import { usePersistentState } from '../hooks/usePersistentState';
 import { usePrices } from '../hooks/usePrices';
-import { formatPrice } from '../lib/prices';
-import { PriceToggle } from '../components/PriceToggle';
+import { useMoney } from '../hooks/useMoney';
+import { PriceBar } from '../components/PriceBar';
 import { downloadFile } from '../lib/ui';
 import { FilterBar } from '../components/FilterBar';
 import { CardGrid } from '../components/CardGrid';
@@ -24,6 +24,7 @@ export function CollectionPage() {
   const [message, setMessage] = useState<string | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const prices = usePrices();
+  const { format: formatPrice } = useMoney();
   const [showPrices, setShowPrices] = usePersistentState('showPrices', true);
   const pricesOn = showPrices && prices.available;
   const fileRef = useRef<HTMLInputElement>(null);
@@ -170,7 +171,7 @@ export function CollectionPage() {
         onSearchEnter={quickAdd ? addTopResult : undefined}
       />
 
-      {prices.available && <PriceToggle show={showPrices} onChange={setShowPrices} updatedAt={prices.updatedAt} />}
+      <PriceBar show={showPrices} onChange={setShowPrices} />
 
       <CardGrid
         cards={cards}

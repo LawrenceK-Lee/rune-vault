@@ -5,10 +5,13 @@ import { cap, cardImage } from '../lib/ui';
 import { DomainDots, QuantityStepper, RarityGem } from './bits';
 import { CardText } from './CardText';
 import { usePrices } from '../hooks/usePrices';
-import { cheapestCopy, formatPrice, headlinePrice, tcgplayerUrl, type FinishPrice } from '../lib/prices';
+import { cheapestCopy, headlinePrice, tcgplayerUrl, type FinishPrice } from '../lib/prices';
+import { useMoney } from '../hooks/useMoney';
+import { PriceDisclaimer } from './PriceBar';
 
 function PriceSection({ card }: { card: Card }) {
   const { available, prices, updatedAt } = usePrices();
+  const { format: formatPrice } = useMoney();
   if (!available) return null;
   const entry = prices[card.id];
   const cheapest = cheapestCopy(card, prices);
@@ -52,12 +55,14 @@ function PriceSection({ card }: { card: Card }) {
           Buy on TCGplayer ↗
         </a>
       )}
+      <PriceDisclaimer className="mt-3" />
     </div>
   );
 }
 
 function PrintingPrice({ id }: { id: string }) {
   const { prices } = usePrices();
+  const { format: formatPrice } = useMoney();
   const p = headlinePrice(prices[id]);
   return p == null ? null : <span className="ml-1 text-emerald-300/90">· {formatPrice(p)}</span>;
 }

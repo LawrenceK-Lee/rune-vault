@@ -12,7 +12,7 @@ import { CardDetailModal } from '../components/CardDetailModal';
 import { ErrorNote } from '../components/bits';
 import { usePersistentState } from '../hooks/usePersistentState';
 import { usePrices } from '../hooks/usePrices';
-import { PriceToggle } from '../components/PriceToggle';
+import { PriceBar } from '../components/PriceBar';
 
 export function CardsPage() {
   const { session } = useAuth();
@@ -41,7 +41,7 @@ export function CardsPage() {
       )}
       <ErrorNote error={collection.error} />
       <FilterBar filters={filters} onChange={setFilters} sort={sort} onSort={setSort} showOwned={signedIn} resultCount={cards.length} pricesAvailable={prices.available} />
-      {prices.available && <PriceToggle show={showPrices} onChange={setShowPrices} updatedAt={prices.updatedAt} />}
+      <PriceBar show={showPrices} onChange={setShowPrices} />
       <CardGrid
         cards={cards}
         renderCard={(c) => (

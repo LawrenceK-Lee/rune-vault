@@ -37,18 +37,24 @@ Card images are loaded from Riot's CDN as resized WebP files, and the service wo
 
 ## Prices
 
-Card prices are TCGplayer market prices in USD. They come from [TCGCSV](https://tcgcsv.com), a free daily mirror of TCGplayer's catalog, and update once a day at about 20:00 UTC.
+Card prices are TCGplayer market prices in USD. They come from [TCGCSV](https://tcgcsv.com), a free daily mirror of TCGplayer's catalog, which refreshes at about 20:00 UTC.
 
-`scripts/sync-prices.mjs` downloads them into `public/prices.json`, which the app loads at runtime. That file is generated, so it isn't committed to Git. The script runs automatically before `npm run dev` and `npm run build`. It skips the download when nothing has changed, and if the download fails, the app keeps its existing prices.
+The prices live in `public/prices.json`, which is committed to the repo and loaded by the app at runtime. A GitHub Action, [update-prices.yml](.github/workflows/update-prices.yml), runs daily at 21:30 UTC. It runs `scripts/sync-prices.mjs` and commits the file if anything changed. If the site is hosted on Vercel, Netlify or a similar service, that commit triggers a redeploy, so the live site always has the latest prices.
+
+To start a refresh yourself, open the **Actions** tab on GitHub, choose **Update card prices**, then **Run workflow**. To refresh locally, run `npm run sync-prices`, then `git pull` before your next push, because the Action also commits this file.
 
 Following TCGCSV's [usage guidelines](https://tcgcsv.com/docs), the browser never calls TCGCSV directly, and the script identifies itself and waits between requests.
 
+**Currency:** you can choose a display currency in the price bar. The conversion uses that day's European Central Bank reference rate, fetched from [frankfurter.dev](https://frankfurter.dev) along with the prices. You can also type your own exchange rate. These settings are saved per device.
+
 Prices appear in these places:
 - A badge on each card tile, which you can turn off with **Show prices**
-- Price sorting on the Cards and Collection pages
+- Price sorting on the Cards, Collection and deck pages
 - Market and lowest-listing prices for each finish in the card details, with a **Buy on TCGplayer** link
 - The estimated value of your collection
 - A "cost to complete" figure for each deck, using the cheapest printing of each missing card
+
+Wherever prices are shown, a notice explains when they update and when they were last refreshed.
 
 ## Scripts
 
@@ -59,7 +65,7 @@ Prices appear in these places:
 | `npm run preview` | Serve the production build, including the service worker |
 | `npm test` | Run the deck-rule unit tests |
 | `npm run sync-cards` | Re-download the card list from Riot's gallery |
-| `npm run sync-prices` | Refresh TCGplayer prices (add `-- --force` to re-download even if unchanged) |
+| `npm run sync-prices` | Refresh TCGplayer prices and exchange rates (add `-- --force` to re-download even if unchanged) |
 
 ## Deck rules enforced
 

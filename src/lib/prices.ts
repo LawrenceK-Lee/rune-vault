@@ -18,20 +18,25 @@ export interface PriceData {
   source: string;
   currency: 'USD';
   sourceUpdatedAt: string;
+  syncedAt?: string;
+  /** Units of each currency per 1 USD (European Central Bank reference rates). */
+  rates?: Record<string, number>;
+  ratesDate?: string | null;
   prices: Record<string, PriceEntry>;
 }
 
-export const tcgplayerUrl = (productId: number) => `https://www.tcgplayer.com/product/${productId}`;
+/** When TCGCSV publishes new TCGplayer prices, and when our GitHub Action picks them up (UTC). */
+export const PRICE_SOURCE_REFRESH_UTC = { hour: 20, minute: 0 };
+export const PRICE_SYNC_UTC = { hour: 21, minute: 30 };
 
-const usd = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
-export const formatPrice = (n: number | null | undefined) => (n == null ? '—' : usd.format(n));
-
-/** Compact form for tiles: $0.25, $12, $1.2k */
-export function formatPriceShort(n: number) {
-  if (n >= 1000) return `$${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k`;
-  if (n >= 100) return `$${Math.round(n)}`;
-  return usd.format(n);
+/** Today's occurrence of a UTC time, shown in the viewer's local time zone, e.g. "8:30 am". */
+export function localTimeOfUtc({ hour, minute }: { hour: number; minute: number }) {
+  const d = new Date();
+  d.setUTCHours(hour, minute, 0, 0);
+  return d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
 }
+
+export const tcgplayerUrl = (productId: number) => `https://www.tcgplayer.com/product/${productId}`;
 
 const finishPrice = (f?: FinishPrice) => f?.m ?? f?.l ?? null;
 
