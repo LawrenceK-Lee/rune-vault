@@ -56,9 +56,54 @@ const slug = (s) =>
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '');
 
+// Riot's gallery data has errors in some sets (seen in Radiance, Nov 2026): card types and
+// domains shuffled between cards, or left blank. The corrections below are checked against
+// the printed cards, and each one is counted so the sync log shows when they stop being needed.
+const corrections = { type: [], domain: [] };
+
+// The image's accessibility text starts with the printed type ("Riftbound Spell: Scorched Earth")
+// and matches the card face even where the cardType field is wrong.
+const PRINTED_TYPES = new Set(['unit', 'spell', 'gear', 'battlefield', 'legend', 'rune']);
+function printedType(raw) {
+  const t = raw.cardImage?.accessibilityText?.match(/^Riftbound ([A-Za-z]+):/)?.[1]?.toLowerCase();
+  return PRINTED_TYPES.has(t) ? t : null;
+}
+
+// Sets whose single-domain cards are numbered in fixed blocks per domain, in this order. The
+// collector number then gives the true domain (verified against every card frame in the set).
+const DOMAIN_ORDER = ['fury', 'calm', 'mind', 'body', 'chaos', 'order'];
+const DOMAIN_BLOCKS = { RAD: { size: 23, last: 138 } };
+
+function fixDomains(cards) {
+  const bases = new Map();
+  for (const c of cards) {
+    const block = DOMAIN_BLOCKS[c.set];
+    if (!block || c.isAltArt || !c.collectorNumber || c.collectorNumber > block.last) continue;
+    const domain = DOMAIN_ORDER[Math.floor((c.collectorNumber - 1) / block.size)];
+    if (c.domains.length !== 1 || c.domains[0] !== domain) {
+      corrections.domain.push(`${c.code} ${c.name}: ${c.domains.join('/') || 'none'} -> ${domain}`);
+      c.domains = [domain];
+    }
+    bases.set(`${c.set}:${c.baseKey}`, c);
+  }
+  // Alt-art and promo printings share their base card's domains.
+  for (const c of cards) {
+    const base = c.isAltArt && bases.get(`${c.set}:${c.baseKey}`);
+    if (base && base.domains.join() !== c.domains.join()) {
+      corrections.domain.push(`${c.code} ${c.name}: ${c.domains.join('/') || 'none'} -> ${base.domains.join('/')}`);
+      c.domains = [...base.domains];
+    }
+  }
+}
+
 function normalize(raw) {
   const set = raw.set?.value ?? {};
   const types = (raw.cardType?.type ?? []).map((t) => t.id);
+  const printed = printedType(raw);
+  if (printed && printed !== types[0]) {
+    corrections.type.push(`${raw.publicCode} ${raw.name}: ${types[0] ?? 'none'} -> ${printed}`);
+    types[0] = printed;
+  }
   const supertypes = (raw.cardType?.superType ?? []).map((t) => t.id);
   const domains = (raw.domain?.values ?? []).map((d) => d.id);
   const tags = raw.tags?.tags ?? [];
@@ -116,6 +161,12 @@ async function main() {
   const items = findCardItems(JSON.parse(match[1]));
 
   const cards = items.map(normalize);
+  fixDomains(cards);
+  for (const [kind, list] of Object.entries(corrections)) {
+    if (!list.length) continue;
+    console.log(`Corrected ${list.length} card ${kind}(s) that Riot's data has wrong:`);
+    for (const line of list) console.log(`  ${line}`);
+  }
   const setRank = (s) => {
     const i = SET_ORDER.indexOf(s);
     return i === -1 ? SET_ORDER.length : i;
