@@ -8,6 +8,36 @@ A web app (installable as a PWA) for the Riftbound TCG:
 
 Browsing cards works with no setup. The collection and decks need a free Supabase project.
 
+## Run it on your own computer
+
+You need [Node.js](https://nodejs.org) 18 or newer. Download or clone this repo, then in its folder:
+
+```bash
+npm install
+npm run dev          # then open http://localhost:5173
+```
+
+What works depends on how much you set up:
+
+| Setup | What you get | Sign-in |
+|---|---|---|
+| **Nothing**: just the two commands above | The full card browser: search, filters, card details, and prices with currency conversion. | None. There's no sign-in button. |
+| **Your own Supabase project** (free, about 10 minutes) | Everything: collection tracking, imports and exports, and deck building. | Yes, but it's your own private project, so only you have accounts on it. |
+
+Without Supabase, the **Collection** and **Decks** pages show setup instructions instead, because your collection and decks are saved in a Supabase database. There's no offline or guest mode yet.
+
+### Quickest way to the full app locally
+
+You only need the parts of [Setup](#setup) below that create the database. Google, Discord and the username sign-up function are all optional:
+
+1. Create a free project at [supabase.com](https://supabase.com).
+2. In **SQL Editor**, run [0001_init.sql](supabase/migrations/0001_init.sql), then [0002_accounts.sql](supabase/migrations/0002_accounts.sql).
+3. Copy `.env.example` to `.env.local` and fill in your Project URL and **publishable** key (see step 3 of [Supabase](#supabase-accounts--cloud-storage)).
+4. In **Authentication → Sign In / Providers → Email**, turn off **Confirm email**, so you can sign up without waiting for a confirmation email.
+5. Restart `npm run dev`. On the **Create account** tab, enter a username, an email (it doesn't have to be real while Confirm email is off) and a password.
+
+Leave the **Email** field empty only if you've deployed the username sign-up function (step 5 of Setup). Without it, username-only sign-up fails.
+
 ## Setup
 
 ```bash
