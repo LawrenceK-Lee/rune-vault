@@ -1,4 +1,4 @@
-# Riftbound Companion
+# Rift Unbound
 
 A web app (installable as a PWA) for the Riftbound TCG:
 
@@ -20,7 +20,7 @@ npm run dev                  # http://localhost:5173
 
 1. Create a free project at [supabase.com](https://supabase.com).
 2. Open **SQL Editor**, paste in [supabase/migrations/0001_init.sql](supabase/migrations/0001_init.sql), and run it. This creates the `collection_items`, `decks` and `deck_cards` tables, with row-level security so each user only sees their own data.
-3. Go to **Settings → API**, copy the Project URL and the `anon` public key, and put them in `.env.local`.
+3. In **Project Settings → API Keys**, copy the **publishable** key (`sb_publishable_...`), and copy the Project URL from **Project Settings → Data API**. Put both in `.env.local`. Never use the **secret** key (`sb_secret_...`) in this app: anything in a `VITE_` variable is shipped to every visitor's browser.
 4. Optional: under **Authentication → URL Configuration**, add your site URL (for example `http://localhost:5173`) so email confirmation and magic links redirect correctly. If you want sign-up to work without email confirmation while developing, turn off "Confirm email" under **Authentication → Providers → Email**.
 
 ## Card data

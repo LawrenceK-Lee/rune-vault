@@ -1,9 +1,14 @@
 import { createClient } from '@supabase/supabase-js';
 
 const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
+// Publishable key (sb_publishable_…); the legacy "anon" key name is still accepted.
+const anonKey = (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? import.meta.env.VITE_SUPABASE_ANON_KEY) as string | undefined;
 
-export const supabaseConfigured = Boolean(url && anonKey && !url.includes('your-project-ref'));
+if (anonKey?.startsWith('sb_secret_')) {
+  throw new Error('A Supabase SECRET key is configured in the browser app. Use the publishable key (sb_publishable_…) instead, and rotate the secret key in Supabase.');
+}
+
+export const supabaseConfigured = Boolean(url && anonKey && !url.includes('your-project-ref') && !anonKey.includes('your-key'));
 
 // When not configured we still create a client against a dummy URL so imports work;
 // the UI shows setup instructions instead of making requests.

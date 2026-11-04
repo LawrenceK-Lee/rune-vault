@@ -9,8 +9,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['icon.svg'],
       manifest: {
-        name: 'Riftbound Companion',
-        short_name: 'Riftbound',
+        name: 'Rift Unbound',
+        short_name: 'Rift Unbound',
         description: 'Browse Riftbound cards, track your collection and build decks.',
         theme_color: '#0f1420',
         background_color: '#0f1420',

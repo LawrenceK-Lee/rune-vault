@@ -13,7 +13,7 @@ export function SetupPage() {
           Open <b>SQL Editor</b>, paste the contents of <code className="text-gold-300">supabase/migrations/0001_init.sql</code>, and run it.
         </li>
         <li>
-          Copy <code>.env.example</code> to <code>.env.local</code> and fill in the Project URL and anon key from <b>Settings → API</b>.
+          Copy <code>.env.example</code> to <code>.env.local</code> and fill in your Project URL and <b>publishable</b> key (<code>sb_publishable_…</code>) from <b>Project Settings → API Keys</b>. Never use the secret key here.
         </li>
         <li>Restart <code>npm run dev</code>.</li>
       </ol>
