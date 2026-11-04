@@ -42,7 +42,7 @@ export function LoginPage() {
       <div className="mb-4 grid grid-cols-3 gap-1 rounded-lg bg-ink-800 p-1 text-sm">
         {(['signin', 'signup', 'magic'] as const).map((m) => (
           <button key={m} type="button" onClick={() => setMode(m)} className={`rounded-md py-1.5 ${mode === m ? 'bg-ink-600 text-white' : 'text-slate-400'}`}>
-            {m === 'signin' ? 'Password' : m === 'signup' ? 'Sign up' : 'Email link'}
+            {m === 'signin' ? 'Sign in' : m === 'signup' ? 'Sign up' : 'Email link'}
           </button>
         ))}
       </div>

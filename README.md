@@ -35,6 +35,21 @@ npm run sync-cards
 
 Card images are loaded from Riot's CDN as resized WebP files, and the service worker caches them for offline use.
 
+## Prices
+
+Card prices are TCGplayer market prices in USD. They come from [TCGCSV](https://tcgcsv.com), a free daily mirror of TCGplayer's catalog, and update once a day at about 20:00 UTC.
+
+`scripts/sync-prices.mjs` downloads them into `public/prices.json`, which the app loads at runtime. That file is generated, so it isn't committed to Git. The script runs automatically before `npm run dev` and `npm run build`. It skips the download when nothing has changed, and if the download fails, the app keeps its existing prices.
+
+Following TCGCSV's [usage guidelines](https://tcgcsv.com/docs), the browser never calls TCGCSV directly, and the script identifies itself and waits between requests.
+
+Prices appear in these places:
+- A badge on each card tile, which you can turn off with **Show prices**
+- Price sorting on the Cards and Collection pages
+- Market and lowest-listing prices for each finish in the card details, with a **Buy on TCGplayer** link
+- The estimated value of your collection
+- A "cost to complete" figure for each deck, using the cheapest printing of each missing card
+
 ## Scripts
 
 | Command | What it does |
@@ -44,6 +59,7 @@ Card images are loaded from Riot's CDN as resized WebP files, and the service wo
 | `npm run preview` | Serve the production build, including the service worker |
 | `npm test` | Run the deck-rule unit tests |
 | `npm run sync-cards` | Re-download the card list from Riot's gallery |
+| `npm run sync-prices` | Refresh TCGplayer prices (add `-- --force` to re-download even if unchanged) |
 
 ## Deck rules enforced
 

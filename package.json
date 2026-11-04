@@ -10,7 +10,10 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
-    "sync-cards": "node scripts/sync-cards.mjs"
+    "sync-cards": "node scripts/sync-cards.mjs",
+    "sync-prices": "node scripts/sync-prices.mjs",
+    "predev": "node scripts/sync-prices.mjs --soft",
+    "prebuild": "node scripts/sync-prices.mjs --soft"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.47.10",

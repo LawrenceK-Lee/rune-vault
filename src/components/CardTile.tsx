@@ -3,6 +3,7 @@ import type { Card } from '../types/card';
 import { cardImage } from '../lib/ui';
 import { displayName } from '../lib/cards';
 import { QuantityStepper } from './bits';
+import { formatPriceShort } from '../lib/prices';
 
 interface Props {
   card: Card;
@@ -12,9 +13,11 @@ interface Props {
   /** Extra content under the image (e.g. deck add buttons). */
   footer?: React.ReactNode;
   dimmed?: boolean;
+  /** Market price in USD; null/undefined hides the badge. */
+  price?: number | null;
 }
 
-function CardTileImpl({ card, owned, onOwnedChange, onOpen, footer, dimmed }: Props) {
+function CardTileImpl({ card, owned, onOwnedChange, onOpen, footer, dimmed, price }: Props) {
   const [loaded, setLoaded] = useState(false);
   const landscape = card.orientation === 'landscape';
   return (
@@ -44,6 +47,11 @@ function CardTileImpl({ card, owned, onOwnedChange, onOpen, footer, dimmed }: Pr
         {owned != null && owned > 0 && (
           <span className="absolute right-1.5 top-1.5 rounded-md bg-ink-950/85 px-1.5 py-0.5 text-xs font-bold text-gold-300 ring-1 ring-gold-400/50">
             ×{owned}
+          </span>
+        )}
+        {price != null && (
+          <span className="absolute bottom-1.5 left-1.5 rounded-md bg-ink-950/85 px-1.5 py-0.5 text-xs font-semibold tabular-nums text-emerald-300 ring-1 ring-emerald-400/30" title="TCGplayer market price (USD)">
+            {formatPriceShort(price)}
           </span>
         )}
       </button>

@@ -4,6 +4,63 @@ import { PRINTINGS, displayName, legendChampion } from '../lib/cards';
 import { cap, cardImage } from '../lib/ui';
 import { DomainDots, QuantityStepper, RarityGem } from './bits';
 import { CardText } from './CardText';
+import { usePrices } from '../hooks/usePrices';
+import { cheapestCopy, formatPrice, headlinePrice, tcgplayerUrl, type FinishPrice } from '../lib/prices';
+
+function PriceSection({ card }: { card: Card }) {
+  const { available, prices, updatedAt } = usePrices();
+  if (!available) return null;
+  const entry = prices[card.id];
+  const cheapest = cheapestCopy(card, prices);
+  const finishes = ([['Normal', entry?.n], ['Foil', entry?.f]] as [string, FinishPrice | undefined][]).filter(([, f]) => f);
+
+  return (
+    <div className="rounded-lg border border-emerald-900/60 bg-emerald-950/20 p-3">
+      <div className="mb-2 flex items-baseline justify-between gap-2">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-emerald-300/90">Price · {card.publicCode}</h3>
+        {updatedAt && <span className="text-[11px] text-slate-500">TCGplayer, {new Date(updatedAt).toLocaleDateString()}</span>}
+      </div>
+      {finishes.length ? (
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="text-left text-xs text-slate-400">
+              <th className="font-normal">Finish</th>
+              <th className="font-normal">Market</th>
+              <th className="font-normal">Lowest listing</th>
+            </tr>
+          </thead>
+          <tbody className="tabular-nums">
+            {finishes.map(([label, f]) => (
+              <tr key={label}>
+                <td className="text-slate-300">{label}</td>
+                <td className="font-semibold text-emerald-300">{formatPrice(f!.m)}</td>
+                <td className="text-slate-300">{formatPrice(f!.l)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ) : (
+        <p className="text-sm text-slate-400">No current TCGplayer price for this printing.</p>
+      )}
+      {cheapest && cheapest.cardId !== card.id && (
+        <p className="mt-2 text-xs text-slate-400">
+          Cheapest printing of this card: {formatPrice(cheapest.price)} ({PRINTINGS.get(card.baseKey)?.find((c) => c.id === cheapest.cardId)?.publicCode})
+        </p>
+      )}
+      {entry && (
+        <a href={tcgplayerUrl(entry.p)} target="_blank" rel="noopener noreferrer" className="btn-ghost mt-3 w-full">
+          Buy on TCGplayer ↗
+        </a>
+      )}
+    </div>
+  );
+}
+
+function PrintingPrice({ id }: { id: string }) {
+  const { prices } = usePrices();
+  const p = headlinePrice(prices[id]);
+  return p == null ? null : <span className="ml-1 text-emerald-300/90">· {formatPrice(p)}</span>;
+}
 
 export function CardDetailModal({
   card,
@@ -84,6 +141,8 @@ export function CardDetailModal({
 
             {actions}
 
+            <PriceSection card={card} />
+
             <div>
               <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
                 Printings {qty ? '· copies you own' : ''}
@@ -98,6 +157,7 @@ export function CardDetailModal({
                         <span className="block text-xs text-slate-400">
                           {p.setName} · {cap(p.rarity)}
                           {p.isSigned ? ' · Signed' : p.isAltArt ? ' · Alt art' : ''}
+                          <PrintingPrice id={p.id} />
                         </span>
                       </span>
                     </button>

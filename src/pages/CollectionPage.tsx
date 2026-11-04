@@ -3,6 +3,9 @@ import type { Card } from '../types/card';
 import { ALL_CARDS, CARDS_BY_ID, EMPTY_FILTERS, SETS, displayName, filterCards, type CardFilters, type SortKey } from '../lib/cards';
 import { useCollection } from '../hooks/useCollection';
 import { usePersistentState } from '../hooks/usePersistentState';
+import { usePrices } from '../hooks/usePrices';
+import { formatPrice } from '../lib/prices';
+import { PriceToggle } from '../components/PriceToggle';
 import { downloadFile } from '../lib/ui';
 import { FilterBar } from '../components/FilterBar';
 import { CardGrid } from '../components/CardGrid';
@@ -20,15 +23,25 @@ export function CollectionPage() {
   const [open, setOpen] = useState<Card | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
+  const prices = usePrices();
+  const [showPrices, setShowPrices] = usePersistentState('showPrices', true);
+  const pricesOn = showPrices && prices.available;
   const fileRef = useRef<HTMLInputElement>(null);
 
   // Quick add searches every card (owned or not) so new pulls can be logged fast.
   const effective = useMemo(() => (quickAdd ? { ...filters, owned: 'all' as const } : filters), [quickAdd, filters]);
-  const cards = useMemo(() => filterCards(ALL_CARDS, effective, sort, col.qty), [effective, sort, col.qty]);
+  const cards = useMemo(() => filterCards(ALL_CARDS, effective, sort, col.qty, prices.priceOf), [effective, sort, col.qty, prices.priceOf]);
 
   const stats = useMemo(() => {
     let total = 0;
-    for (const r of col.rows) total += r.quantity;
+    let value = 0;
+    let unpriced = 0;
+    for (const r of col.rows) {
+      total += r.quantity;
+      const p = prices.priceOf(r.card_id);
+      if (p == null) unpriced += r.quantity;
+      else value += p * r.quantity;
+    }
     const perSet = SETS.map((s) => {
       const base = new Set<string>();
       const ownedBase = new Set<string>();
@@ -43,8 +56,8 @@ export function CollectionPage() {
       }
       return { ...s, unique: base.size, ownedUnique: ownedBase.size, ownedPrintings: printings };
     });
-    return { total, distinct: col.rows.length, perSet };
-  }, [col.rows, col.qty]);
+    return { total, distinct: col.rows.length, perSet, value, unpriced };
+  }, [col.rows, col.qty, prices.priceOf]);
 
   const close = useCallback(() => setOpen(null), []);
 
@@ -92,6 +105,11 @@ export function CollectionPage() {
           <h1 className="heading text-2xl">My Collection</h1>
           <p className="text-sm text-slate-400">
             {stats.total.toLocaleString()} cards · {stats.distinct.toLocaleString()} different printings
+            {prices.available && stats.total > 0 && (
+              <span title={`Sum of TCGplayer market prices${stats.unpriced ? `; ${stats.unpriced} card(s) have no price` : ''}`}>
+                {' · '}est. value <b className="text-emerald-300">{formatPrice(stats.value)}</b>
+              </span>
+            )}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -147,14 +165,17 @@ export function CollectionPage() {
         onSort={setSort}
         showOwned={!quickAdd}
         resultCount={cards.length}
+        pricesAvailable={prices.available}
         searchRef={searchRef}
         onSearchEnter={quickAdd ? addTopResult : undefined}
       />
 
+      {prices.available && <PriceToggle show={showPrices} onChange={setShowPrices} updatedAt={prices.updatedAt} />}
+
       <CardGrid
         cards={cards}
         empty={stats.distinct ? 'No cards match these filters.' : 'Your collection is empty. Use Quick add, or add cards from the Cards page.'}
-        renderCard={(c) => <CardTile card={c} onOpen={setOpen} owned={col.qty(c.id)} onOwnedChange={(n) => col.setQty(c.id, n)} />}
+        renderCard={(c) => <CardTile card={c} onOpen={setOpen} price={pricesOn ? prices.priceOf(c.id) : undefined} owned={col.qty(c.id)} onOwnedChange={(n) => col.setQty(c.id, n)} />}
       />
 
       {open && <CardDetailModal card={open} onClose={close} onSelect={setOpen} qty={col.qty} setQty={col.setQty} />}

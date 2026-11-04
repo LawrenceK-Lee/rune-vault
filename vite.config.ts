@@ -27,6 +27,12 @@ export default defineConfig({
         maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
         runtimeCaching: [
           {
+            // Daily price snapshot: use the network when online, fall back to the last copy offline.
+            urlPattern: ({ url }) => url.pathname === '/prices.json',
+            handler: 'NetworkFirst',
+            options: { cacheName: 'prices', networkTimeoutSeconds: 4 },
+          },
+          {
             // Card art from Riot's CDN: cache-first, it never changes for a given URL.
             urlPattern: ({ url }) => url.hostname === 'cmsassets.rgpub.io',
             handler: 'CacheFirst',

@@ -11,6 +11,8 @@ import { CardTile } from '../components/CardTile';
 import { CardDetailModal } from '../components/CardDetailModal';
 import { ErrorNote } from '../components/bits';
 import { usePersistentState } from '../hooks/usePersistentState';
+import { usePrices } from '../hooks/usePrices';
+import { PriceToggle } from '../components/PriceToggle';
 
 export function CardsPage() {
   const { session } = useAuth();
@@ -19,10 +21,13 @@ export function CardsPage() {
   const [filters, setFilters] = usePersistentState<CardFilters>('cards.filters', EMPTY_FILTERS);
   const [sort, setSort] = usePersistentState<SortKey>('cards.sort', 'set');
   const [open, setOpen] = useState<Card | null>(null);
+  const prices = usePrices();
+  const [showPrices, setShowPrices] = usePersistentState('showPrices', true);
+  const pricesOn = showPrices && prices.available;
 
   const cards = useMemo(
-    () => filterCards(ALL_CARDS, filters, sort, signedIn ? collection.qty : undefined),
-    [filters, sort, signedIn, collection.qty],
+    () => filterCards(ALL_CARDS, filters, sort, signedIn ? collection.qty : undefined, prices.priceOf),
+    [filters, sort, signedIn, collection.qty, prices.priceOf],
   );
   const close = useCallback(() => setOpen(null), []);
 
@@ -35,13 +40,15 @@ export function CardsPage() {
         </div>
       )}
       <ErrorNote error={collection.error} />
-      <FilterBar filters={filters} onChange={setFilters} sort={sort} onSort={setSort} showOwned={signedIn} resultCount={cards.length} />
+      <FilterBar filters={filters} onChange={setFilters} sort={sort} onSort={setSort} showOwned={signedIn} resultCount={cards.length} pricesAvailable={prices.available} />
+      {prices.available && <PriceToggle show={showPrices} onChange={setShowPrices} updatedAt={prices.updatedAt} />}
       <CardGrid
         cards={cards}
         renderCard={(c) => (
           <CardTile
             card={c}
             onOpen={setOpen}
+            price={pricesOn ? prices.priceOf(c.id) : undefined}
             owned={signedIn ? collection.qty(c.id) : undefined}
             onOwnedChange={signedIn ? (n) => collection.setQty(c.id, n) : undefined}
           />

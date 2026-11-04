@@ -18,6 +18,8 @@ import { cap, cardImage } from '../lib/ui';
 import { useDeckEditor, type DeckDraft } from '../hooks/useDecks';
 import { useCollection } from '../hooks/useCollection';
 import { usePersistentState } from '../hooks/usePersistentState';
+import { usePrices } from '../hooks/usePrices';
+import { cheapestCopy, formatPrice } from '../lib/prices';
 import { FilterBar } from '../components/FilterBar';
 import { CardGrid } from '../components/CardGrid';
 import { CardTile } from '../components/CardTile';
@@ -116,6 +118,8 @@ export function DeckEditorPage() {
   const [sort, setSort] = usePersistentState<SortKey>('deck.sort', 'energy');
   const [open, setOpen] = useState<Card | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
+  const prices = usePrices();
+  const [showPrices] = usePersistentState('showPrices', true);
 
   const draft = ed.draft;
   const legend = draft?.legendId ? CARDS_BY_ID.get(draft.legendId) ?? null : null;
@@ -134,8 +138,8 @@ export function DeckEditorPage() {
   const pool = useMemo(() => {
     let base = ALL_CARDS.filter((c) => !isToken(c) && c.type !== 'legend');
     if (legalOnly && legend) base = base.filter((c) => fitsDomains(c, legend) && (!c.supertypes.includes('signature') || (tag != null && c.tags.includes(tag))));
-    return filterCards(base, filters, sort, col.qty);
-  }, [legalOnly, legend, tag, filters, sort, col.qty]);
+    return filterCards(base, filters, sort, col.qty, prices.priceOf);
+  }, [legalOnly, legend, tag, filters, sort, col.qty, prices.priceOf]);
 
   const inDeck = useCallback(
     (id: string, zone: Zone) => draft?.entries.find((e) => e.cardId === id && e.zone === zone)?.quantity ?? 0,
@@ -165,6 +169,12 @@ export function DeckEditorPage() {
   const ownedFor = (c: Card) => col.qtyBase(c.baseKey);
   const neededFor = (c: Card) => needByBase.get(c.baseKey)?.needed ?? 0;
   const totalMissing = missing.reduce((n, l) => n + l.missing, 0);
+  const missingCost = missing.map((l) => {
+    const best = l.missing ? cheapestCopy(l.card, prices.prices) : null;
+    return { ...l, unit: best?.price ?? null };
+  });
+  const costToComplete = missingCost.reduce((sum, l) => sum + (l.unit ?? 0) * l.missing, 0);
+  const unpricedMissing = missingCost.filter((l) => l.missing && l.unit == null).length;
 
   const copyText = async (text: string, what: string) => {
     try {
@@ -217,7 +227,7 @@ export function DeckEditorPage() {
           </button>
         </div>
       )}
-      <FilterBar filters={filters} onChange={setFilters} sort={sort} onSort={setSort} showOwned resultCount={pool.length} />
+      <FilterBar filters={filters} onChange={setFilters} sort={sort} onSort={setSort} showOwned resultCount={pool.length} pricesAvailable={prices.available} />
       <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-300">
         <input type="checkbox" className="h-4 w-4 accent-gold-400" checked={legalOnly} onChange={(e) => setLegalOnly(e.target.checked)} />
         Only show cards legal for {legendChampion(legend)} ({legend.domains.map(cap).join(' / ')})
@@ -235,6 +245,7 @@ export function DeckEditorPage() {
               card={c}
               onOpen={setOpen}
               owned={col.qty(c.id) || undefined}
+              price={showPrices && prices.available ? prices.priceOf(c.id) : undefined}
               footer={
                 <div className="mt-1 space-y-1">
                   <div className="flex gap-1">
@@ -355,7 +366,10 @@ export function DeckEditorPage() {
               className="text-xs font-normal text-gold-300 underline"
               onClick={() =>
                 copyText(
-                  missing.filter((l) => l.missing).map((l) => `${l.missing} ${displayName(l.card)} (${l.card.publicCode})`).join('\n'),
+                  missingCost
+                    .filter((l) => l.missing)
+                    .map((l) => `${l.missing} ${displayName(l.card)} (${l.card.publicCode})${l.unit != null ? ` ~${formatPrice(l.unit)} each` : ''}`)
+                    .join('\n'),
                   'Missing list copied',
                 )
               }
@@ -364,9 +378,15 @@ export function DeckEditorPage() {
             </button>
           )}
         </h3>
+        {totalMissing > 0 && prices.available && (
+          <p className="mb-2 text-sm text-slate-300" title="Cheapest current TCGplayer market price for each missing card, any printing or finish">
+            About <b className="text-emerald-300">{formatPrice(costToComplete)}</b> to complete
+            {unpricedMissing > 0 && <span className="text-slate-500"> ({unpricedMissing} card{unpricedMissing === 1 ? '' : 's'} unpriced)</span>}
+          </p>
+        )}
         {totalMissing > 0 && (
           <ul className="space-y-0.5 text-sm">
-            {missing
+            {missingCost
               .filter((l) => l.missing)
               .map((l) => (
                 <li key={l.baseKey} className="flex justify-between gap-2">
@@ -375,6 +395,7 @@ export function DeckEditorPage() {
                   </button>
                   <span className="shrink-0 tabular-nums text-red-200">
                     need {l.missing} <span className="text-slate-500">(own {l.owned})</span>
+                    {prices.available && l.unit != null && <span className="ml-1.5 text-emerald-300/90">{formatPrice(l.unit * l.missing)}</span>}
                   </span>
                 </li>
               ))}

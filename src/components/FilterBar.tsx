@@ -17,7 +17,9 @@ export function FilterBar({
   resultCount,
   searchRef,
   onSearchEnter,
+  pricesAvailable = false,
 }: {
+  pricesAvailable?: boolean;
   filters: CardFilters;
   onChange: (f: CardFilters) => void;
   sort: SortKey;
@@ -55,6 +57,8 @@ export function FilterBar({
           <option value="set">Sort: Set #</option>
           <option value="name">Sort: Name</option>
           <option value="energy">Sort: Energy</option>
+          {pricesAvailable && <option value="price-desc">Sort: Price (high → low)</option>}
+          {pricesAvailable && <option value="price-asc">Sort: Price (low → high)</option>}
         </select>
         <button type="button" className={active ? 'btn-primary' : 'btn-ghost'} onClick={() => setOpen((o) => !o)}>
           Filters{active ? ` (${active})` : ''}

@@ -62,7 +62,7 @@ export const EMPTY_FILTERS: CardFilters = {
   showVariants: false,
 };
 
-export type SortKey = 'set' | 'name' | 'energy';
+export type SortKey = 'set' | 'name' | 'energy' | 'price-desc' | 'price-asc';
 
 const norm = (s: string) => s.toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '');
 
@@ -76,6 +76,7 @@ export function filterCards(
   f: CardFilters,
   sort: SortKey,
   ownedQty?: (id: string) => number,
+  priceOf?: (id: string) => number | null,
 ): Card[] {
   const terms = norm(f.query).split(/\s+/).filter(Boolean);
   const out = cards.filter((c) => {
@@ -99,6 +100,17 @@ export function filterCards(
   if (sort === 'name') out.sort((a, b) => displayName(a).localeCompare(displayName(b)));
   else if (sort === 'energy')
     out.sort((a, b) => (a.energy ?? 99) - (b.energy ?? 99) || displayName(a).localeCompare(displayName(b)));
+  else if ((sort === 'price-desc' || sort === 'price-asc') && priceOf) {
+    // Unpriced cards always go last.
+    const dir = sort === 'price-desc' ? -1 : 1;
+    const p = new Map(out.map((c) => [c.id, priceOf(c.id)]));
+    out.sort((a, b) => {
+      const pa = p.get(a.id) ?? null;
+      const pb = p.get(b.id) ?? null;
+      if (pa == null || pb == null) return pa == null ? (pb == null ? 0 : 1) : -1;
+      return (pa - pb) * dir;
+    });
+  }
   // 'set' keeps the order from cards.json (set, then collector number).
   return out;
 }
